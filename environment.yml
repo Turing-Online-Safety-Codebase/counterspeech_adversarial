@@ -1,0 +1,28 @@
+name: counterspeech
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.8
+  - pip=22.0.3
+  - pip:
+    - small_text[transformers]==1.0.0a8
+    - azure-cosmos==4.1.0
+    - azure-storage-blob==12.9.0
+    - transformers[sentencepiece]
+    - ray==0.8.7
+    - ray[tune]
+    - wandb
+  - absl-py
+
+  # Core python
+  - numpy
+  - tqdm
+  - pandas
+  - ipykernel
+  
+  # Plotting
+  - matplotlib
+  - plotly
+  - seaborn
