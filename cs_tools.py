@@ -1,5 +1,4 @@
 import sys, os
-from xxlimited import Str
 import pandas as pd
 import numpy as np
 import json
@@ -351,7 +350,7 @@ def create_random_cosmos_sample(
 
 def get_tweet_reply_count(
     container, 
-    tweet_id: Str, 
+    tweet_id: str, 
     valid_only: bool = True, 
     filter: str = None) -> int:
     """
