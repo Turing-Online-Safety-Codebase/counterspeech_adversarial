@@ -104,9 +104,4 @@ if __name__ == '__main__':
     root_dir = 'counterspeech_mps/data/mps_replies'
     get_files(root_dir, "counterspeech_mps/mps_replies", "root.json")
 
-    # df = pandas.read_csv("counterspeech_mps/mp_replies.csv")
-    #
-    # df = df.sample(n=100)
-    # df.to_csv("counterspeech_mps/100_samples_mp_replies.csv")
-
 
