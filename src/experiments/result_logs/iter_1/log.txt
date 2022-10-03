@@ -1,0 +1,12 @@
+09/27/2022 16:18:42 - INFO - root - Training/evaluation parameters <function parse_args at 0x7fd6b0155750>
+09/27/2022 16:18:42 - INFO - root - load a local file for train: ./data/counterspeech_plf/toy_examples/train_data_copy.csv
+09/27/2022 16:18:42 - INFO - root - load a local file for validation: ./data/counterspeech_plf/toy_examples/val_data_copy.csv
+09/27/2022 16:18:42 - INFO - root - load a local file for test: ./data/counterspeech_plf/toy_examples//test_data_copy.csv
+09/27/2022 16:18:42 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): s3.amazonaws.com:443
+09/27/2022 16:18:43 - DEBUG - urllib3.connectionpool - https://s3.amazonaws.com:443 "HEAD /datasets.huggingface.co/datasets/datasets/csv/csv.py HTTP/1.1" 200 0
+09/27/2022 16:19:32 - INFO - root - Training/evaluation parameters <function parse_args at 0x7ff1a02bd750>
+09/27/2022 16:19:32 - INFO - root - load a local file for train: data/counterspeech_plf/toy_examples/train_data_copy.csv
+09/27/2022 16:19:32 - INFO - root - load a local file for validation: ./data/counterspeech_plf/toy_examples/val_data_copy.csv
+09/27/2022 16:19:32 - INFO - root - load a local file for test: ./data/counterspeech_plf/toy_examples//test_data_copy.csv
+09/27/2022 16:19:32 - DEBUG - urllib3.connectionpool - Starting new HTTPS connection (1): s3.amazonaws.com:443
+09/27/2022 16:19:33 - DEBUG - urllib3.connectionpool - https://s3.amazonaws.com:443 "HEAD /datasets.huggingface.co/datasets/datasets/csv/csv.py HTTP/1.1" 200 0
