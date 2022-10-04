@@ -14,8 +14,8 @@ def parse_args():
     """Parses Command Line Args"""
     parser = argparse.ArgumentParser(description="Process labelled data for modeling")
     parser.add_argument('--input_data_path', type=str, default='', help='Path to data for splitting')
-    parser.add_argument('--output_data_path', type=str, default='', help='Path to data for splitting')
-    parser.add_argument('--data_split_size', type=str, default="0.8_0.5", help='Path to data for splitting')
+    parser.add_argument('--output_data_path', type=str, default='', help='Path to data storage')
+    parser.add_argument('--data_split_size', type=str, default="0.8_0.5", help='propotion to make data split')
     args = parser.parse_args()
 
     print("the inputs are:")
