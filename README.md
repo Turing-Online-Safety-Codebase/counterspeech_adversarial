@@ -1,6 +1,6 @@
-# counterspeech_MPs
-
-## Running and deallocating
+# Counter speech classification using adversarial training
+ 
+## Running and deallocating on Azure VM
 
 The `run_python_then_dealloc.sh` shell script provides a simple way to have an Azure VM automatically after a python script finishes.
 
