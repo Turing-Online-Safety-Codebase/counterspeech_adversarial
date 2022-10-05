@@ -1,6 +1,5 @@
 import pandas
 import argparse
-import numpy as np
 
 """
 Merge expert annotation with crowd annotation.
@@ -10,9 +9,9 @@ Create final annotations for each instance.
 def parse_args():
     """Parses Command Line Args"""
     parser = argparse.ArgumentParser(description="Process labelled data for modeling")
-    parser.add_argument('--input_path', default="R1-R5_counter_speech_V2.xlsx", type=str, help='path to input data')
-    parser.add_argument('--expert_reviewed_path', default="expert_review_counter_speech_project_JB - R1-R5_final.csv", type=str, help='path to expert annotation')
-    parser.add_argument('--output_path', default="R1-R5_counter_speech_final.csv", type=str, help='path to outputfile')
+    parser.add_argument('--input_path', default="counterspeech_adversarial/data/twitter_plf_data/twitter_plf_labelled/expert_reviewed/R1-R5_counter_speech_V2.xlsx", type=str, help='path to input data')
+    parser.add_argument('--expert_reviewed_path', default="counterspeech_adversarial/data/twitter_plf_data/twitter_plf_labelled/expert_reviewed/expert_review_counter_speech_project_JB - R1-R5_final.csv", type=str, help='path to expert annotation')
+    parser.add_argument('--output_path', default="counterspeech_adversarial/data/twitter_plf_data/twitter_plf_labelled/expert_reviewed/R1-R5_counter_speech_final.csv", type=str, help='path to outputfile')
     args = parser.parse_args()
 
     print("the inputs are:")
@@ -25,10 +24,10 @@ def get_final_annotation(crowd, expert):
         return expert
     return crowd
 
-def get_text(df, ACT_text, Rep_text, column_name):
+def get_text(df1, ACT_text, Rep_text, column_name):
     """Given a unit_id from appen report, retrieve its text from a dataframe."""
-    if Rep_text in df['rep_text'].tolist():
-        return df[(df['ACT_text'] == ACT_text) & (df['rep_text'] == Rep_text)][column_name].iloc[0]
+    if Rep_text in df1['rep_text'].tolist():
+        return df1[(df1['ACT_text'] == ACT_text) & (df1['rep_text'] == Rep_text)][column_name].iloc[0]
     return None
 
 

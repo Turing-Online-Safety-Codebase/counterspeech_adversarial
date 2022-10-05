@@ -283,7 +283,6 @@ def main():
         return result
 
     datasets = datasets.map(preprocess_function, batched=True, load_from_cache_file=not data_args.overwrite_cache)
-
     train_dataset = datasets["train"]
     eval_dataset = datasets["validation"]
     if data_args.test_file is not None:
@@ -355,19 +354,19 @@ def main():
             trainer.state.save_to_json(os.path.join(training_args.output_dir, "trainer_state.json"))
 
     # Evaluation
-    eval_results = {}
-    tasks = ["cs_cls"]
     if training_args.do_eval:
         logger.info("*** Evaluate on validation set ***")
 
         eval_datasets = [eval_dataset]
+        eval_results = {}
+        tasks = ["cs_cls"]
         for eval_dataset, task in zip(eval_datasets, tasks):
             eval_result = trainer.evaluate(eval_dataset=eval_dataset)
 
-            output_eval_file = os.path.join(training_args.output_dir, f"eval_results_on_val_set.txt")
+            output_eval_file = os.path.join(training_args.output_dir, "eval_results_on_val_set.txt")
             if trainer.is_world_process_zero():
                 with open(output_eval_file, "w") as writer:
-                    logger.info(f"***** Eval results *****")
+                    logger.info("***** Eval results *****")
                     for key, value in sorted(eval_result.items()):
                         logger.info(f" {key} = {value}")
                         writer.write(f"{key} = {value}\n")
@@ -377,7 +376,7 @@ def main():
     if training_args.do_predict:
         logger.info("*** Test ***")
 
-        pred_file = data_args.pred_file if data_args.pred_file is not None else f"test_results_on_test_set.csv"
+        pred_file = data_args.pred_file if data_args.pred_file is not None else "test_results_on_test_set.csv"
         test_datasets = [test_dataset]
         gold_labels = test_dataset['label']
         # print(test_dataset["label"][:5])
@@ -390,7 +389,7 @@ def main():
             output_test_file = os.path.join(training_args.output_dir, pred_file)
             if trainer.is_world_process_zero():
                 with open(output_test_file, "w") as writer:
-                    logger.info(f"***** Prediction finished *****")
+                    logger.info("***** Prediction finished *****")
                     writer.write("index \t abusive_text \t counter_speech \t label_id \t label \t prediction \n")
                     for index, item in enumerate(predictions):
                         item = label_list[item]

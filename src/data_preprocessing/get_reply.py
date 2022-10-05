@@ -24,7 +24,7 @@ def get_reply_text(file):
     created_at = data["created_at"]
     return text, text_replaced, id_str, created_at
 
-def get_files(dir, outputfile, root_file):
+def get_files(directory, outputfile, root_file):
     josnl_outfile = open(f'{outputfile}.jl', 'w')
     root_cnt = 1
     act_id = []
@@ -39,14 +39,14 @@ def get_files(dir, outputfile, root_file):
     rep_cnt = []
 
     # read through folders
-    for path in glob.glob(f'{dir}/*'):
+    for path in glob.glob(f'{directory}/*'):
         data = {}
         reply = {}
         reply_cnt = 1
         root_list = []
         reply_list = []
         folder_name = os.path.basename(path)
-        files = glob.glob(f'{dir}/{folder_name}/*.json')
+        files = glob.glob(f'{directory}/{folder_name}/*.json')
         files.sort()
 
         # get id, root_tweet
@@ -112,5 +112,5 @@ def get_files(dir, outputfile, root_file):
     df.to_csv(f'{outputfile}.csv')
 
 if __name__ == '__main__':
-    root_dir = 'data/counterspeech_plf/plf_replies'
-    get_files(root_dir, "data/counterspeech_plf/plf_replies_v4", "root_tweet.json")
+    root_dir = 'counterspeech_adversarial/data/twitter_plf_data/twitter_plf_raw/plf_replies'
+    get_files(root_dir, "counterspeech_adversarial/data/twitter_plf_data/twitter_plf_raw/plf_replies_v5", "root_tweet.json")

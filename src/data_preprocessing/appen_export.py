@@ -4,7 +4,6 @@ Output results to csv and create a csv for tweets required extra review
 """
 
 import argparse
-import pandas
 import pandas as pd
 from sklearn.metrics import cohen_kappa_score
 from collections import Counter
