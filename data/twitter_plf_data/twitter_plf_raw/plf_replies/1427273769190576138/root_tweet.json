@@ -1,0 +1,130 @@
+{
+    "referenced_tweets": [
+        {
+            "type": "replied_to",
+            "id": "1427256556169670660"
+        }
+    ],
+    "text": "@adam_couser @ManUtd @raphaelvarane \ud83d\udeae\ud83d\udeae",
+    "reply_settings": "everyone",
+    "public_metrics": {
+        "retweet_count": 0,
+        "reply_count": 0,
+        "like_count": 0,
+        "quote_count": 0
+    },
+    "created_at": "2021-08-16T14:19:18.000Z",
+    "author_id": "234735069",
+    "conversation_id": "1427200964834992128",
+    "context_annotations": [
+        {
+            "domain": {
+                "id": "10",
+                "name": "Person",
+                "description": "Named people in the world like Nelson Mandela"
+            },
+            "entity": {
+                "id": "828568057970712576",
+                "name": "Raphael Varane",
+                "description": "Raphael Varane"
+            }
+        },
+        {
+            "domain": {
+                "id": "60",
+                "name": "Athlete",
+                "description": "An athlete in the world, like Serena Williams or Lionel Messi"
+            },
+            "entity": {
+                "id": "828568057970712576",
+                "name": "Raphael Varane",
+                "description": "Raphael Varane"
+            }
+        },
+        {
+            "domain": {
+                "id": "12",
+                "name": "Sports Team",
+                "description": "A sports team organization, like Arsenal and the Boston Celtics"
+            },
+            "entity": {
+                "id": "731226183572934657",
+                "name": "Manchester United"
+            }
+        }
+    ],
+    "in_reply_to_user_id": "853256825671753728",
+    "entities": {
+        "mentions": [
+            {
+                "start": 0,
+                "end": 12,
+                "username": "adam_couser",
+                "id": "853256825671753728"
+            },
+            {
+                "start": 13,
+                "end": 20,
+                "username": "ManUtd",
+                "id": "558797310"
+            },
+            {
+                "start": 21,
+                "end": 35,
+                "username": "raphaelvarane",
+                "id": "550202880"
+            }
+        ]
+    },
+    "possibly_sensitive": false,
+    "source": "Twitter for Android",
+    "lang": "und",
+    "id": "1427273769190576138",
+    "user": {
+        "id": "234735069"
+    },
+    "in_reply_to_user_id_str": "853256825671753728",
+    "retweeted_status": null,
+    "quoted_status": null,
+    "in_reply_to_id_str": "1427256556169670660",
+    "id_str": "1427273769190576138",
+    "date": "16/08/21",
+    "datetime": "2021-08-16T14:19:18.000Z",
+    "user_id": "234735069",
+    "seed_author": false,
+    "text_replaced": "@USER @CLUB @PLAYER \ud83d\udeae\ud83d\udeae",
+    "seed_BODY": [],
+    "seed_CLUB": [
+        "@ManUtd"
+    ],
+    "seed_PLAYER": [
+        "@raphaelvarane"
+    ],
+    "non_seed_USER": [
+        "@adam_couser"
+    ],
+    "BODY": 0,
+    "CLUB": 1,
+    "PLAYER": 1,
+    "valid": true,
+    "processed": true,
+    "_rid": "SKweAOVajo2JxWsAAABAAQ==",
+    "_self": "dbs/SKweAA==/colls/SKweAOVajo0=/docs/SKweAOVajo2JxWsAAABAAQ==/",
+    "_etag": "\"10001802-0000-1100-0000-62359cb10000\"",
+    "_attachments": "attachments/",
+    "text_replaced_b": "[USER] [CLUB] [PLAYER] \ud83d\udeae\ud83d\udeae",
+    "no_content": false,
+    "valid_lang": true,
+    "type_RT": false,
+    "type_QT": false,
+    "type_RP": false,
+    "type_SA": true,
+    "type_str": "standalone",
+    "seed_target": true,
+    "bucket": "audience_contact",
+    "abuse_mar22": {
+        "label": 1,
+        "probability": 0.5359560251235962
+    },
+    "_ts": 1647680689
+}
