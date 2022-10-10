@@ -203,6 +203,7 @@ def main():
         logger.info(f"load a local file for {key}: {data_files[key]}")
 
     datasets = load_dataset("csv", data_files=data_files)
+    logger.info(f"data structure is: {datasets}")
 
     # Labels
     # https://huggingface.co/docs/datasets/package_reference/main_classes.html#datasets.Dataset.unique
@@ -345,7 +346,7 @@ def main():
         output_train_file = os.path.join(training_args.output_dir, "train_results.txt")
         if trainer.is_world_process_zero():
             with open(output_train_file, "w") as writer:
-                logger.info("***** Train results *****")
+                logger.info("\n***** Train results *****")
                 for key, value in sorted(metrics.items()):
                     logger.info(f" {key} = {value}")
                     writer.write(f"{key} = {value}\n")
@@ -355,7 +356,7 @@ def main():
 
     # Evaluation
     if training_args.do_eval:
-        logger.info("*** Evaluate on validation set ***")
+        logger.info("\n*** Evaluate on validation set ***")
 
         eval_datasets = [eval_dataset]
         eval_results = {}
@@ -374,7 +375,7 @@ def main():
 
     # Predict
     if training_args.do_predict:
-        logger.info("*** Test ***")
+        logger.info("\n*** Prediction on test set ***")
 
         pred_file = data_args.pred_file if data_args.pred_file is not None else "test_results_on_test_set.csv"
         test_datasets = [test_dataset]
@@ -389,11 +390,11 @@ def main():
             output_test_file = os.path.join(training_args.output_dir, pred_file)
             if trainer.is_world_process_zero():
                 with open(output_test_file, "w") as writer:
-                    logger.info("***** Prediction finished *****")
                     writer.write("index \t abusive_text \t counter_speech \t label_id \t label \t prediction \n")
                     for index, item in enumerate(predictions):
                         item = label_list[item]
                         writer.write(f"{index} \t {test_dataset[sentence1_key][index]} \t {test_dataset[sentence2_key][index]} \t {label_list[gold_labels[index]]} \t {gold_labels[index]} \t {item} \n")
+                    logger.info("***** Prediction finished *****")
 
 
 if __name__ == "__main__":
