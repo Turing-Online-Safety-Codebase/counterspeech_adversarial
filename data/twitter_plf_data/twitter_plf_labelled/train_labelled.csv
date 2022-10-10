@@ -1,4 +1,4 @@
-,ACT_cnt,Rep_cnt,ACT_text_abuse_prob,Rep_ID,rounds,abusive_speech,counter_speech,label,rep_support,rep_abusive
+,ACT_cnt,Rep_cnt,ACT_text_abuse_prob,Rep_ID,rounds,abusive_speech,counter_speech,label,rep_support_final,rep_abusive_final
 6654,ACT_4650,reply_2,0.5458867,1464651614413803520,R6,[PLAYER] [CLUB] They do not exist among humans 👎🏻,[USER] [PLAYER] [CLUB] Have a day off you plastic cunt,disagrees_with_the_post,no,no
 2297,ACT_1470,reply_2,0.9862175,1483932077116506112,R5,[PLAYER] you are shite dfkm,"[USER] [PLAYER] But guy, what’s your business, are you a Chelsea fan😂😂😂",disagrees_with_the_post,no,no
 6624,ACT_4600,reply_1,0.52102858,1500086604098060288,R6,Happy birthday [PLAYER] please stop being shit xx,[USER] [PLAYER] I wish his parents just went to sleep that night instead of conceiving that waste of sperm wanker. Happy birthday [PLAYER] have a good one today I know you’re gonna shit the bed tomorrow.,disagrees_with_the_post,no,no
