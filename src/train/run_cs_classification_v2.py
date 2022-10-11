@@ -145,9 +145,11 @@ def main():
 
     # Setup logging
     logging.basicConfig(
+        filename=f"{training_args.output_dir}/{training_args.run_name}.log", 
         format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
         datefmt="%m/%d/%Y %H:%M:%S",
-        handlers=[logging.StreamHandler(sys.stdout)],
+        handlers=[logging.StreamHandler(sys.stdout),
+            logging.FileHandler(f"./result_logs/{training_args.run_name}.txt", mode='w')],
     )
     log_level = training_args.get_process_log_level()
     logger.setLevel(log_level)
@@ -184,8 +186,7 @@ def main():
 
     # Get the test dataset: CSV/JSON test file
     # Use as labels the column called 'label' and as pair of sentences the
-    # sentences in columns called 'sentence1' and 'sentence2' if such column exists or the first two columns not named
-    # label if at least two columns are provided.
+    # sentences in columns called 'sentence1' and 'sentence2' or 'abusive_speech' and 'counter_speech'.
     data_files = {"train": data_args.train_file, "validation": data_args.validation_file}
 
     if training_args.do_predict:
