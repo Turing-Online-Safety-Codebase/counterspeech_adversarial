@@ -2,7 +2,7 @@
  
 ## Running and deallocating on Azure VM
 
-The `run_python_then_dealloc.sh` shell script provides a simple way to have an Azure VM automatically after a python script finishes.
+The `run_python_then_dealloc.sh` shell script provides a simple way to have an Azure VM automatically deallocate after a python script finishes.
 
 Edit the name of the python script to be run, the name of the log file to write to, and the name of the VM to deallocate, to match your use case. 
 
