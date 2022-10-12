@@ -2,11 +2,20 @@
  
 ## Collect abusive tweets and their replies
 
-## Transform the collected data into long format
+## Data preprosessing
 
-## Data annotation 
+### Transform the collected data into long format
 
-## Training models
+### Data annotation and analysis
+
+
+## Model training
+
+To train counter speech classifiers, run
+
+```
+bash ./scripts/train_model.sh
+```
 
 
 ## Update adversarial examples to training data
