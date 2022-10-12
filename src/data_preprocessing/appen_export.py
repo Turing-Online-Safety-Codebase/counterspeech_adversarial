@@ -10,16 +10,16 @@ from collections import Counter
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Process labelled data for modeling")
-    parser.add_argument('--data_dir', type=str, default='data/counterspeech_plf', help='')
+    parser.add_argument('--data_dir', type=str, default='counterspeech_adversarial/data/twitter_plf_data/twitter_plf_labelled', help='')
     parser.add_argument('--annotation_filename', default='R6_full.csv', type=str, help='name of labelled data')
     parser.add_argument('--gold_filename', type=str, default='R6_Appen_test_quiz.csv', help='name of gold standard')
-    parser.add_argument('--output_file', default='data/counterspeech_plf/2.Appen_export_rangled/R6_rangled.csv', type=str, help='')
+    parser.add_argument('--output_filename', default='R6_rangled.csv', type=str, help='name of output file')
     parser.add_argument('--column_reply_category', type=str, default='which_category_best_describes_the_reply',
-                        help='column name for reply_category annotation in Task 1')
+                        help='column name for reply_category annotation')
     parser.add_argument('--column_reply_abusive', type=str, default='is_the_reply_abusive',
-                        help='column name for reply_abusive annotation in Task 2')
+                        help='column name for reply_abusive annotation')
     parser.add_argument('--column_reply_support', type=str, default='is_the_reply_supporting_the_football_player',
-                        help='column name for reply_support annotation in Task 2')
+                        help='column name for reply_support annotation')
     parser.add_argument('--flag_reply_category', type=bool, default=True, help='flag reply_category')
     parser.add_argument('--flag_reply_abusive', type=bool, default=True, help='flag reply_abusive')
     parser.add_argument('--flag_reply_support', type=bool, default=True, help='flag reply_abusive')
@@ -202,10 +202,10 @@ def main(output_file, data_dir, annotation_filename, gold_file, column_reply_cat
      flag_reply_category, flag_reply_support, flag_reply_abusive, reply_category_bar, reply_support_bar, reply_abusive_bar):
 
     batch = annotation_filename.split("_")[0]
-    df_gold = pd.read_csv(f'{data_dir}/1.Appen_annotation/{batch}/{gold_file}', dtype={'Rep_ID': str, '_golden':str, 'ACT_ID':str})
-    df_t1 = pd.read_csv(f'{data_dir}/1.Appen_annotation/{batch}/{annotation_filename}', dtype={'rep_id': str})
-    df_t1 = df_t1.astype({'_golden': str})  # convert numpy boolean to string
-    df_gold = df_gold.astype({'Rep_ID': str})  # convert numpy boolean to string
+    df_gold = pd.read_csv(f'{data_dir}/Appen_annotation/{batch}/{gold_file}', dtype={'Rep_ID': str, '_golden':str, 'ACT_ID':str})
+    df_t1 = pd.read_csv(f'{data_dir}/Appen_annotation/{batch}/{annotation_filename}', dtype={'rep_id': str})
+    df_t1 = df_t1.astype({'_golden': str})  # convert the type of '_golden' (numpy boolean) to string
+    df_gold = df_gold.astype({'Rep_ID': str})  # convert the type of 'Rep_ID' (numpy boolean) to string
 
     df_merged = df_gold[(df_gold['_golden'] == "FALSE") | (df_gold['rounds'] == 'R6 ( using R4 as gold)')]
     print("number of rows: ", len(df_merged))
@@ -332,11 +332,11 @@ def main(output_file, data_dir, annotation_filename, gold_file, column_reply_cat
     print("avg % of annotators agree on the majority vote for rep_abusive: ",
           round(df_quiz["% rep_abusive_annotation"].mean(), 3))
 
-    df_merged.to_csv(output_file, index=False)
+    df_merged.to_csv(f'{data_dir}/Appen_export_rangled/{output_file}', index=False)
 
 if __name__ == '__main__':
     args = parse_args()
-    main(args.output_file, args.data_dir, args.annotation_filename, args.gold_filename, args.column_reply_category,
+    main(args.output_filename, args.data_dir, args.annotation_filename, args.gold_filename, args.column_reply_category,
          args.column_reply_support, args.column_reply_abusive, args.flag_reply_category, args.flag_reply_support,
          args.flag_reply_abusive, args.reply_category_bar, args.reply_support_bar, args.reply_abusive_bar)
 
