@@ -1,5 +1,17 @@
 # Counter speech classification using adversarial training
  
+## Collect abusive tweets and their replies
+
+## Transform the collected data into long format
+
+## Data annotation 
+
+## Training models
+
+
+## Update adversarial examples to training data
+
+
 ## Running and deallocating on Azure VM
 
 The `run_python_then_dealloc.sh` shell script provides a simple way to have an Azure VM automatically deallocate after a python script finishes.
