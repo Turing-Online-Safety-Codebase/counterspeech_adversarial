@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 """
-Splits labelled data into train, val and test sets of predefined size.
+Splits labelled data into train, val and test sets of a predefined size.
 """
 
 import argparse
@@ -12,8 +12,8 @@ from sklearn.model_selection import train_test_split
 def parse_args():
     """Parses Command Line Args"""
     parser = argparse.ArgumentParser(description="Process labelled data for modeling")
-    parser.add_argument('--input_data_path', type=str, default='counterspeech_adversarial/data/twitter_plf_data/twitter_plf_labelled/expert_reviewed/R1-R6_counter_speech.csv', help='Path to data for splitting')
-    parser.add_argument('--output_data_path', type=str, default='counterspeech_adversarial/data/sample_modeling_data', help='Path to data storage')
+    parser.add_argument('--input_data_path', type=str, default='data/twitter_plf_data/twitter_plf_labelled/expert_reviewed/R1-R6_counter_speech.csv', help='Path to data for splitting')
+    parser.add_argument('--output_data_path', type=str, default='data/sample_modeling_data', help='Path to data storage')
     parser.add_argument('--data_split_size', type=str, default="0.8_0.5", help='propotion to make data split')
     args = parser.parse_args()
 
@@ -35,6 +35,8 @@ def main(data_split_size, input_data_path, output_data_path):
 
     df = df[["ACT_cnt", "Rep_cnt", "ACT_text_replaced", "Rep_text_replaced", "ACT_text_abuse_prob", 
         "Rep_ID", "rep_category_final", "rep_support_final", "rep_abusive_final"]]
+    df = df.rename(columns={"ACT_text_replaced": "abusive_speech", "Rep_text_replaced": "counter_speech", 
+                            "rep_category_final": "label"})
         
     train_size, val_size = data_split_size.split("_")
 

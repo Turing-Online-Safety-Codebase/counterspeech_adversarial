@@ -2,16 +2,16 @@
 
 export TASK_NAME=path-to-hans
 export MODEL_PATH=microsoft/deberta-v3-small
-export TRAIN_FILE=counterspeech_adversarial/data/sample_modeling_data/train_labelled.csv
-export VAL_FILE=counterspeech_adversarial/data/sample_modeling_data/val_labelled.csv
-export TEST_FILE=counterspeech_adversarial/data/sample_modeling_data/test_labelled.csv
+export TRAIN_FILE=data/sample_modeling_data/train_labelled.csv
+export VAL_FILE=data/sample_modeling_data/val_labelled.csv
+export TEST_FILE=data/sample_modeling_data/test_labelled.csv
 export NUM_EPOCHS=3
-export OUTPUT_DIR=counterspeech_adversarial/experiments/result_logs/iter_1/run1_deberta/
+export OUTPUT_DIR=experiments/models/iter_1/run1_deberta/
 export RUN_NAME=run1_deberta-v3-small_epoch3_2e-5
 
-# train initial model
-echo "training initial model"
-python run_cs_classification_v2.py \
+# train model
+echo "training model"
+python src/train/run_cs_classification_v2.py \
     --report_to none \
     --model_name_or_path $MODEL_PATH \
     --train_file $TRAIN_FILE \

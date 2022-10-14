@@ -10,7 +10,7 @@ from collections import Counter
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Process labelled data for modeling")
-    parser.add_argument('--data_dir', type=str, default='counterspeech_adversarial/data/twitter_plf_data/twitter_plf_labelled', help='')
+    parser.add_argument('--data_dir', type=str, default='data/twitter_plf_data/twitter_plf_labelled', help='')
     parser.add_argument('--annotation_filename', default='R6_full.csv', type=str, help='name of labelled data')
     parser.add_argument('--gold_filename', type=str, default='R6_Appen_test_quiz.csv', help='name of gold standard')
     parser.add_argument('--output_filename', default='R6_rangled.csv', type=str, help='name of output file')

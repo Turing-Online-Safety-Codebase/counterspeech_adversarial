@@ -9,9 +9,9 @@ Create final annotations for each instance.
 def parse_args():
     """Parses Command Line Args"""
     parser = argparse.ArgumentParser(description="Process labelled data for modeling")
-    parser.add_argument('--input_path', default="counterspeech_adversarial/data/twitter_plf_data/twitter_plf_labelled/expert_reviewed/R1-R5_counter_speech_V2.xlsx", type=str, help='path to input data')
-    parser.add_argument('--expert_reviewed_path', default="counterspeech_adversarial/data/twitter_plf_data/twitter_plf_labelled/expert_reviewed/expert_review_counter_speech_project_JB - R1-R5_final.csv", type=str, help='path to expert annotation')
-    parser.add_argument('--output_path', default="counterspeech_adversarial/data/twitter_plf_data/twitter_plf_labelled/expert_reviewed/R1-R5_counter_speech_final.csv", type=str, help='path to outputfile')
+    parser.add_argument('--input_path', default="data/twitter_plf_data/twitter_plf_labelled/expert_reviewed/R1-R5_counter_speech_V2.xlsx", type=str, help='path to input data')
+    parser.add_argument('--expert_reviewed_path', default="data/twitter_plf_data/twitter_plf_labelled/expert_reviewed/expert_review_counter_speech_project_JB - R1-R5_final.csv", type=str, help='path to expert annotation')
+    parser.add_argument('--output_path', default="data/twitter_plf_data/twitter_plf_labelled/expert_reviewed/R1-R5_counter_speech_final.csv", type=str, help='path to outputfile')
     args = parser.parse_args()
 
     print("the inputs are:")

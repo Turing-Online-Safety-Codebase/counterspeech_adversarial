@@ -7,20 +7,22 @@ This work aims at developing counter speech classifiers for mitigating online ha
     └─ collection           -> Scripts for data collection from Twitter
     │
     ├── data                -> Folder to store raw data, labelled data, modeling data, 
-                                and adversarial data
+    │                            and adversarial data
     │
     ├── dynabench           -> Task configuration for Dynabench
     │
     ├── dynalab             -> Model handler for Dynalab
     │
+    ├── experiments         -> Folder to store logs and models
+    │
     ├── scripts             -> Bash scripts for training models
     │
     └── src                 -> Source codes for data preprocessing and model training
         │
-        └── data_preprocessing  ->  Scripts for rangling/analysing raw and anntated data,
-                                     creating modeling data
+        └── data_preprocessing    ->  Scripts for rangling/analysing raw and anntated data,
+        │                             creating modeling data
         │
-        └── train               ->  Scripts for model training
+        └── train                 ->  Scripts for model training
 
 
 ## Collect abusive tweets and their replies
@@ -31,10 +33,10 @@ The tweets and replies should be parsed and put converted into a single csv file
 
 ### Transform the collected data into long format
 ```
-python ./src/data_preprocessing/get_reply.py 
+python src/data_preprocessing/get_reply.py 
 ```
 
-This will run through each abusive tweet and all their replies in [the directory](https://github.com/Turing-Online-Safety-Codebase/counterspeech_adversarial/tree/main/data/twitter_plf_data/twitter_plf_raw/plf_replies), and parse necessary info that will then be stored in long data format.
+This will run through each abusive tweet and all their replies in [the directory](https://github.com/Turing-Online-Safety-Codebase/counterspeech_adversarial/tree/main/data/twitter_plf_data/twitter_plf_raw/plf_replies), and parse necessary info that will then be stored in long data format (i.e. [plf_replies_v5.csv](https://github.com/Turing-Online-Safety-Codebase/counterspeech_adversarial/blob/main/data/twitter_plf_data/twitter_plf_raw/plf_replies_v5.csv)).
 
 ## Model training and evaluation
 Once the data is labelled, we can start to train counter speech classifiers and collect dynamic adversarial data over multiple iterations. To train a counter speech classifier, run
@@ -49,8 +51,8 @@ You can specify various training parameters when calling the script.
 To add new adversarial examples to training data after each iteration, run:
 
 ```
-python ./src/data_preprocessing/add_adversaril_data.py 
-    --current_batch <current_iteration> 
+python src/data_preprocessing/add_adversaril_data.py \
+    --current_batch <current_iteration> \
     --adversarial_data <filename_of_adversarial_data>
 ```
 

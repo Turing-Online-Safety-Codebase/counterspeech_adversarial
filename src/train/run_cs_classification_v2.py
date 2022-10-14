@@ -51,10 +51,6 @@ def is_main_process(local_rank):
     Whether or not the current process is the local process, based on `xm.get_ordinal()` (for TPUs) first, then on
     `local_rank`.
     """
-    # if is_torch_tpu_available():
-    #     import torch_xla.core.xla_model as xm
-
-    #     return xm.get_ordinal() == 0
     return local_rank in [-1, 0]
 
 @dataclass
@@ -144,15 +140,11 @@ def main():
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     # Setup logging
-    logging.basicConfig(
-        filename=f"{training_args.output_dir}/{training_args.run_name}.log", 
-        format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
-        datefmt="%m/%d/%Y %H:%M:%S",
-        handlers=[logging.StreamHandler(sys.stdout),
-            logging.FileHandler(f"./result_logs/{training_args.run_name}.txt", mode='w')],
-    )
-    log_level = training_args.get_process_log_level()
-    logger.setLevel(log_level)
+    logger.setLevel(logging.DEBUG)
+    handler = logging.FileHandler(f"experiments/experiment_logs/{training_args.run_name}.log")
+    format = logging.Formatter('%(asctime)s  %(name)s %(levelname)s: %(message)s')
+    handler.setFormatter(format)
+    logger.addHandler(handler)
 
     # Log on each process the small summary:
     logger.warning(

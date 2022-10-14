@@ -1,9 +1,11 @@
+
+"""extract all replies for each root tweet and store them in a single csv in long format"""
+
 import glob
 import os
 import pandas
 import json
 
-"""extract all replies for each root tweet and store them in a single csv in long format"""
 
 def get_id_text_lable(file):
     with open(file, 'r') as f:
@@ -112,5 +114,5 @@ def get_files(directory, outputfile, root_file):
     df.to_csv(f'{outputfile}.csv')
 
 if __name__ == '__main__':
-    root_dir = 'counterspeech_adversarial/data/twitter_plf_data/twitter_plf_raw/plf_replies'
-    get_files(root_dir, "counterspeech_adversarial/data/twitter_plf_data/twitter_plf_raw/plf_replies_v5", "root_tweet.json")
+    root_dir = 'data/twitter_plf_data/twitter_plf_raw/plf_replies'
+    get_files(root_dir, "data/twitter_plf_data/twitter_plf_raw/plf_replies_v5", "root_tweet.json")
