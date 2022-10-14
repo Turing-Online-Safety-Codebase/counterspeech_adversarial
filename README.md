@@ -6,7 +6,8 @@ This work aims at developing counter speech classifiers for mitigating online ha
 
     └─ collection           -> Scripts for data collection from Twitter
     │
-    ├── data                -> Folder to store raw data, labelled data, modeling data and adversarial data
+    ├── data                -> Folder to store raw data, labelled data, modeling data, 
+                                and adversarial data
     │
     ├── dynabench           -> Task configuration for Dynabench
     │
@@ -16,7 +17,8 @@ This work aims at developing counter speech classifiers for mitigating online ha
     │
     └── src                 -> Source codes for data preprocessing and model training
         │
-        └── data_preprocessing  ->  Scripts for rangling/analysing raw and anntated data, creating modeling data
+        └── data_preprocessing  ->  Scripts for rangling/analysing raw and anntated data,
+                                     creating modeling data
         │
         └── train               ->  Scripts for model training
 
@@ -47,7 +49,9 @@ You can specify various training parameters when calling the script.
 To add new adversarial examples to training data after each iteration, run:
 
 ```
-python ./src/data_preprocessing/add_adversaril_data.py --current_batch <current_iteration> --adversarial_data <filename_of_adversarial_data>
+python ./src/data_preprocessing/add_adversaril_data.py 
+    --current_batch <current_iteration> 
+    --adversarial_data <filename_of_adversarial_data>
 ```
 
 ## Running and deallocating on Azure VM
