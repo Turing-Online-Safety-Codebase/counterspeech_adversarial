@@ -24,6 +24,7 @@ import random
 import re
 import sys
 import numpy as np
+import wandb
 
 from dataclasses import dataclass, field
 from typing import Optional, Union#, Protocol
@@ -43,7 +44,8 @@ from transformers import (
     set_seed,
 )
 
-
+# wandb.init()
+wandb.login()
 logger = logging.getLogger(__name__)
 
 def is_main_process(local_rank):

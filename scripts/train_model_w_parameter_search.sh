@@ -1,4 +1,4 @@
-#!/bin/bash
+%%bash 
 
 export TASK_NAME=path-to-hans
 export MODEL_PATH=microsoft/deberta-v3-small
@@ -6,13 +6,13 @@ export TRAIN_FILE=data/sample_modeling_data/train_labelled.csv
 export VAL_FILE=data/sample_modeling_data/val_labelled.csv
 export TEST_FILE=data/sample_modeling_data/test_labelled.csv
 export NUM_EPOCHS=3
-export OUTPUT_DIR=experiments/models/iter_1/run1_deberta/
-export RUN_NAME=run1_deberta-v3-small_epoch3_2e-5
+export OUTPUT_DIR=experiments/models/iter_1/run4_parameter_tuning/
+export RUN_NAME=run4_deberta-v3-small_parameter_tuning
 
 # train model
 echo "training model"
-python src/train/cs_classification.py \
-    --report_to none \
+python src/train/cs_classification_parameter_tuning.py \
+    --report_to wandb \
     --model_name_or_path $MODEL_PATH \
     --train_file $TRAIN_FILE \
     --validation_file $VAL_FILE \
@@ -29,7 +29,6 @@ python src/train/cs_classification.py \
     --eval_steps 100 \
     --logging_steps 100 \
     --logging_first_step True \
-    --evaluation_strategy steps \
     --load_best_model_at_end True \
     --metric_for_best_model 'f1' \
     --output_dir $OUTPUT_DIR

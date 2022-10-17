@@ -24,22 +24,22 @@ This work aims at developing counter speech classifiers for mitigating online ha
         │
         └── train                 ->  Scripts for model training
 
-
-## Collect abusive tweets and their replies
+## Workflow
+### Collect abusive tweets and their replies
 The scripts in the folder `collection` contain example codes we use to gather potential abusive tweets and their replies. The example tweets and replies are stored as json files in [the directory](https://github.com/Turing-Online-Safety-Codebase/counterspeech_adversarial/tree/main/data/twitter_plf_data/twitter_plf_raw/plf_replies).
 
-## Data preprosessing
+### Data preprosessing
 The tweets and replies should be parsed and put converted into a single csv file which will then be used for annotation.
 
-### Transform the collected data into long format
+#### Transform the collected data into long format
 ```
 python src/data_preprocessing/get_reply.py 
 ```
 
 This will run through each abusive tweet and all their replies in [the directory](https://github.com/Turing-Online-Safety-Codebase/counterspeech_adversarial/tree/main/data/twitter_plf_data/twitter_plf_raw/plf_replies), and parse necessary info that will then be stored in long data format (i.e. [plf_replies_v5.csv](https://github.com/Turing-Online-Safety-Codebase/counterspeech_adversarial/blob/main/data/twitter_plf_data/twitter_plf_raw/plf_replies_v5.csv)).
 
-## Model training and evaluation
-Once the data is labelled, we can start to train counter speech classifiers and collect dynamic adversarial data over multiple iterations. To train a counter speech classifier, run
+### Model training and evaluation
+Once the data is labelled, we can start to train counter speech classifiers and collect dynamic adversarial data over multiple iterations. To train/evaluate a counter speech classifier, run
 
 ```
 bash ./scripts/train_model.sh
@@ -47,7 +47,13 @@ bash ./scripts/train_model.sh
 
 You can specify various training parameters when calling the script.
 
-## Update adversarial examples to training data
+Alternatively, you can explore hyperparameter tuning while training:
+
+```
+bash ./scripts/train_model_w_parameter_search.sh
+```
+
+### Update adversarial examples to training data
 To add new adversarial examples to training data after each iteration, run:
 
 ```
