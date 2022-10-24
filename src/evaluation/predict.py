@@ -15,7 +15,7 @@
 # limitations under the License.
 # You can also adapt this script on your own text classification task. Pointers for this are left as comments.
 
-""" This script is adapted from run_glue.py from HuggingFace for counter speech classification."""
+""" This script is adapted from run_glue.py by HuggingFace for model inference."""
 
 import transformers
 import logging
@@ -44,34 +44,9 @@ from transformers import (
     set_seed,
 )
 
-
-wandb.login()
+# wandb.init()
+# wandb.login()
 logger = logging.getLogger(__name__)
-
-# Configuration for parameter searrch using wandb
-sweep_config = {
-    'method': 'random',
-    'name': 'sweep',
-    'metric': {'goal': 'maximize', 'name': 'val_acc'},
-}
-parameters_dict = {
-    'epochs': {
-        'values': [1, 2, 3, 4]
-        },
-    'batch_size': {
-        'values': [8, 16, 32]
-        },
-    'learning_rate': {
-        'distribution': 'log_uniform_values',
-        'min': 1e-5,
-        'max': 1e-3
-    },
-    'weight_decay': {
-        'values': [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
-    },
-}
-sweep_config['parameters'] = parameters_dict
-
 
 def is_main_process(local_rank):
     """
@@ -168,7 +143,7 @@ def main():
 
     # Setup logging
     logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler(f"experiments/experiment_logs/{training_args.run_name}.log")
+    handler = logging.FileHandler(f"./run5_footballer_zero-shot.log")
     format = logging.Formatter('%(asctime)s  %(name)s %(levelname)s: %(message)s')
     handler.setFormatter(format)
     logger.addHandler(handler)
@@ -178,47 +153,13 @@ def main():
         f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}"
         + f"distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {training_args.fp16}"
     )
-    # Set the verbosity to info of the Transformers logger (on main process only):
-    if is_main_process(training_args.local_rank):
-        transformers.utils.logging.set_verbosity_info()
-        transformers.utils.logging.enable_default_handler()
-        transformers.utils.logging.enable_explicit_format()
+    
     logger.info(f"Training/evaluation parameters {training_args}")
-
-    # Detecting last checkpoint.
-    last_checkpoint = None
-    if os.path.isdir(training_args.output_dir) and training_args.do_train and not training_args.overwrite_output_dir:
-        last_checkpoint = get_last_checkpoint(training_args.output_dir)
-        if last_checkpoint is None and len(os.listdir(training_args.output_dir)) > 0:
-            raise ValueError(
-                f"Output directory ({training_args.output_dir}) already exists and is not empty. "
-                "Use --overwrite_output_dir to overcome."
-            )
-        elif last_checkpoint is not None:
-            logger.info(
-                f"Checkpoint detected, resuming training at {last_checkpoint}. To avoid this behavior, change "
-                "the `--output_dir` or add `--overwrite_output_dir` to train from scratch."
-            )
 
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
-    # Get the test dataset: CSV/JSON test file
-    # Use as labels the column called 'label' and as pair of sentences the
-    # sentences in columns called 'sentence1' and 'sentence2' or 'abusive_speech' and 'counter_speech'.
-    data_files = {"train": data_args.train_file, "validation": data_args.validation_file}
-
-    if training_args.do_predict:
-        if data_args.test_file is not None:
-            train_extension = data_args.train_file.split(".")[-1]
-            test_extension = data_args.test_file.split(".")[-1]
-            assert (
-                test_extension == train_extension
-            ), "`test_file` should have the same extension (csv or json) as `train_file`."
-            data_files["test"] = data_args.test_file
-        else:
-            raise ValueError("Need a test file for `do_predict`.")
-
+    data_files = {}
     for key in data_files.keys():
         logger.info(f"load a local file for {key}: {data_files[key]}")
 
@@ -227,7 +168,8 @@ def main():
 
     # Labels
     # https://huggingface.co/docs/datasets/package_reference/main_classes.html#datasets.Dataset.unique
-    label_list = datasets["train"].unique("label")
+    label_list = datasets["test"].unique("label")
+    # print(label_list, type("label_list"))
     label_list.sort()  # Let's sort it for determinism
     num_labels = len(label_list)
 
@@ -256,7 +198,7 @@ def main():
     )
 
     # Preprocessing the datasets, set the column names for model inputs
-    non_label_column_names = [name for name in datasets["train"].column_names if name != "label"]
+    non_label_column_names = [name for name in datasets["test"].column_names if name != "label"]
     if "sentence1" in non_label_column_names and "sentence2" in non_label_column_names:
         sentence1_key, sentence2_key = "sentence1", "sentence2"
     else:
@@ -304,15 +246,8 @@ def main():
         return result
 
     datasets = datasets.map(preprocess_function, batched=True, load_from_cache_file=not data_args.overwrite_cache)
-    train_dataset = datasets["train"]
-    val_dataset = datasets["validation"]
     if data_args.test_file is not None:
         test_dataset = datasets["test"]
-
-    # Log a few random samples from the training set:
-    for index in random.sample(range(len(val_dataset)), 3):
-        logger.info(f"Sample {index} of the train set: {train_dataset[index]}.")
-        logger.info(f"Sample {index} of the validation set: {val_dataset[index]}.")
 
     # define metric (use accuracy and f1)
     # Custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
@@ -339,109 +274,41 @@ def main():
     else:
         data_collator = None
 
-    def train(config=None):
-        with wandb.init(config=config):
-            # set sweep configuration
-            config = wandb.config
+    # Initialize Trainer
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset= None,
+        eval_dataset= None,
+        compute_metrics=compute_metrics,
+        tokenizer=tokenizer,
+        data_collator=data_collator,
+    )
 
-            # set training arguments
-            training_args_sweep = TrainingArguments(
-                output_dir=training_args.output_dir, #'cs-deberta-sweeps',
-                report_to='wandb',  # Turn on Weights & Biases logging
-                num_train_epochs=config.epochs,
-                learning_rate=config.learning_rate,
-                weight_decay=config.weight_decay,
-                per_device_train_batch_size=config.batch_size,
-                per_device_eval_batch_size=16,
-                save_strategy='epoch',
-                evaluation_strategy='epoch',
-                logging_strategy='epoch',
-                load_best_model_at_end=True,
-                remove_unused_columns=False,
-            )
+    # Predict
+    if training_args.do_predict:
+        logger.info("\n*** Prediction on test set ***")
 
-            # Initialize Trainer
-            trainer = Trainer(
-                model=model,
-                args=training_args_sweep,
-                train_dataset=train_dataset,
-                eval_dataset=val_dataset,
-                compute_metrics=compute_metrics,
-                tokenizer=tokenizer,
-                data_collator=data_collator,
-            )
+        pred_file = data_args.pred_file if data_args.pred_file is not None else "test_results_on_test_set.csv"
+        test_datasets = [test_dataset]
+        gold_labels = test_dataset['label']
+        tasks = ["cs_cls"]
+        # print(test_dataset["label"][:5])
 
-            # Train
-            if training_args.do_train:
-                if last_checkpoint is not None:
-                    checkpoint = last_checkpoint
-                elif os.path.isdir(model_args.model_name_or_path):
-                    checkpoint = model_args.model_name_or_path
-                else:
-                    checkpoint = None
-                train_result = trainer.train(resume_from_checkpoint=checkpoint)
-                metrics = train_result.metrics
+        for test_dataset, task in zip(test_datasets, tasks):
+            test_dataset.remove_columns("label")
+            predictions = trainer.predict(test_dataset=test_dataset).predictions
+            predictions = np.argmax(predictions, axis=1)
 
-                trainer.save_model()  # Saves the tokenizer too for easy upload
+            output_test_file = os.path.join(training_args.output_dir, pred_file)
+            if trainer.is_world_process_zero():
+                with open(output_test_file, "w") as writer:
+                    writer.write("index \t abusive_text \t counter_speech \t label_id \t label \t prediction \n")
+                    for index, item in enumerate(predictions):
+                        item = label_list[item]
+                        writer.write(f"{index} \t {test_dataset[sentence1_key][index]} \t {test_dataset[sentence2_key][index]} \t {label_list[gold_labels[index]]} \t {gold_labels[index]} \t {item} \n")
+                    logger.info("***** Prediction finished *****")
 
-                output_train_file = os.path.join(training_args.output_dir, "train_results.txt")
-                if trainer.is_world_process_zero():
-                    with open(output_train_file, "w") as writer:
-                        logger.info("\n***** Train results *****")
-                        for key, value in sorted(metrics.items()):
-                            logger.info(f" {key} = {value}")
-                            writer.write(f"{key} = {value}\n")
-
-                    # Need to save the state, since Trainer.save_model saves only the tokenizer with the model
-                    trainer.state.save_to_json(os.path.join(training_args.output_dir, "trainer_state.json"))
-            
-            # Evaluation
-            if training_args.do_eval:
-                logger.info("\n*** Evaluate on validation set ***")
-
-                eval_datasets = [val_dataset]
-                eval_results = {}
-                tasks = ["cs_cls"]
-                for eval_dataset, task in zip(eval_datasets, tasks):
-                    eval_result = trainer.evaluate(eval_dataset=eval_dataset)
-
-                    output_eval_file = os.path.join(training_args.output_dir, "val_results_on_val_set.txt")
-                    if trainer.is_world_process_zero():
-                        with open(output_eval_file, "w") as writer:
-                            logger.info("***** Val results *****")
-                            for key, value in sorted(eval_result.items()):
-                                logger.info(f" {key} = {value}")
-                                writer.write(f"{key} = {value}\n")
-                    eval_results.update(eval_result)
-
-            # # Predict
-            # if training_args.do_predict:
-            #     logger.info("\n*** Prediction on test set ***")
-
-            #     pred_file = data_args.pred_file if data_args.pred_file is not None else "test_results_on_test_set.csv"
-            #     test_datasets = [test_dataset]
-            #     gold_labels = test_dataset['label']
-            #     # print(test_dataset["label"][:5])
-
-            #     for test_dataset, task in zip(test_datasets, tasks):
-            #         test_dataset.remove_columns("label")
-            #         predictions = trainer.predict(test_dataset=test_dataset).predictions
-            #         predictions = np.argmax(predictions, axis=1)
-
-            #         output_test_file = os.path.join(training_args.output_dir, pred_file)
-            #         if trainer.is_world_process_zero():
-            #             with open(output_test_file, "w") as writer:
-            #                 writer.write("index \t abusive_text \t counter_speech \t label_id \t label \t prediction \n")
-            #                 for index, item in enumerate(predictions):
-            #                     item = label_list[item]
-            #                     writer.write(f"{index} \t {test_dataset[sentence1_key][index]} \t {test_dataset[sentence2_key][index]} \t {label_list[gold_labels[index]]} \t {gold_labels[index]} \t {item} \n")
-            #                 logger.info("***** Prediction finished *****")
-
-    # Initialize sweep by passing in config
-    sweep_id = wandb.sweep(sweep_config, project='cs-deberta-sweeps')
-
-    # start sweep agent
-    wandb.agent(sweep_id, train, count=20)
 
 if __name__ == "__main__":
     main()
