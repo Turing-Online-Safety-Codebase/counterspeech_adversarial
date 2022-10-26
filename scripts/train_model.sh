@@ -2,11 +2,11 @@
 
 export TASK_NAME=path-to-hans
 export MODEL_PATH=microsoft/deberta-v3-small
-export TRAIN_FILE=data/sample_modeling_data/train_labelled.csv
-export VAL_FILE=data/sample_modeling_data/val_labelled.csv
-export TEST_FILE=data/sample_modeling_data/test_labelled.csv
+export TRAIN_FILE=data/final_modeling_data/train_labelled.csv
+export VAL_FILE=data/final_modeling_data/val_labelled.csv
+export TEST_FILE=data/final_modeling_data/test_labelled.csv
 export NUM_EPOCHS=3
-export OUTPUT_DIR=experiments/models/iter_1/run1_deberta/
+export OUTPUT_DIR=experiments/models/iter_0/run1_deberta/
 export RUN_NAME=run1_deberta-v3-small_epoch3_2e-5
 
 # train model
