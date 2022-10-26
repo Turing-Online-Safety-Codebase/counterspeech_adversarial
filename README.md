@@ -47,12 +47,6 @@ bash ./scripts/train_model.sh
 
 You can specify various training parameters when calling the script.
 
-Alternatively, you can explore hyperparameter tuning while training:
-
-```
-bash ./scripts/train_model_w_parameter_search.sh
-```
-
 ### Update adversarial examples to training data
 To add new adversarial examples to training data after each iteration, run:
 
