@@ -19,7 +19,7 @@ This work aims at developing counter speech classifiers for mitigating online ha
     │
     └── src                 -> Source codes for data preprocessing and model training
         │
-        └── data_preprocessing    ->  Scripts for rangling/analysing raw and anntated data,
+        └── data_preprocessing    ->  Scripts for wrangling/analysing raw and annotated data,
         │                             creating modeling data
         │
         └── train                 ->  Scripts for model training
