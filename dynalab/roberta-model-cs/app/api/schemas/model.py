@@ -14,10 +14,13 @@ class ModelSingleOutputProbabilities(BaseModel):
     not_counter_speech: float
     other: float
 
-
 class ModelSingleOutput(BaseModel):
     label: str
     prob: ModelSingleOutputProbabilities
 
 class ModelBatchInput(BaseModel):
+    dataset_samples: List[List]
+
+# added
+class ModelBatchOutput(BaseModel):
     dataset_samples: List[Dict]

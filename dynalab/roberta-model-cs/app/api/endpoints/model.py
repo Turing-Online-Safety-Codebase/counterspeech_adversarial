@@ -4,7 +4,7 @@
 
 from fastapi import APIRouter
 
-from app.api.schemas.model import ModelSingleInput, ModelSingleOutput, ModelBatchInput
+from app.api.schemas.model import ModelSingleInput, ModelSingleOutput, ModelBatchInput, ModelBatchOutput
 from app.domain.model import ModelController
 
 
@@ -28,4 +28,11 @@ async def hello():
 async def single_evaluation(data: ModelSingleInput):
     model = ModelController()
     asnwer = model.single_evaluation(data.context, data.response)
+    return asnwer
+
+# added
+@router.post("/batch_evaluation", response_model=ModelBatchOutput)
+async def batch_evaluation(data: ModelBatchInput):
+    model = ModelController()
+    asnwer = model.batch_evaluation(data.dataset_samples)
     return asnwer
