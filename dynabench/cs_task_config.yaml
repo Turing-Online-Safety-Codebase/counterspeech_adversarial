@@ -6,9 +6,6 @@ context:
 - name: context
   placeholder: Enter context...
   type: string
-delta_metrics:
-- type: fairness
-- type: robustness
 input:
 - name: response
   placeholder: Enter response...
