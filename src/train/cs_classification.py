@@ -303,7 +303,7 @@ def main():
         pre_scr = metric_pre.compute(predictions=preds, references=p.label_ids, average="weighted")["precision"]
         rec_scr = metric_rec.compute(predictions=preds, references=p.label_ids, average="weighted")["recall"]
         accuracy = (preds == p.label_ids).astype(np.float32).mean().item()
-        logger.info(f"Results: f1 = {f1_scr}, precision = {pre_scr}, recall = {rec_scr}")
+        logger.info(f"Results: f1 = {f1_scr}, precision = {pre_scr}, recall = {rec_scr}, accuracy = {accuracy}")
         return {"f1": f1_scr, "precision": pre_scr, "recall": rec_scr, "accuracy": accuracy}
 
     # Data collator will default to DataCollatorWithPadding, so we change it if we already did the padding.
