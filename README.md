@@ -80,7 +80,7 @@ python src/data_preprocessing/add_adversaril_data.py \
 ### Evaluate models on a given dataset
 
 ```
-python src/evaluation/predict.py \
+python src/evaluation/cs_classification_predict.py \
     --model_name_or_path $MODEL_PATH \
     --test_file $TEST_FILE \
     --do_predict \

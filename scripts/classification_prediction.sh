@@ -9,7 +9,7 @@ export RUN_NAME=run2_final_deberta_predict
 
 # evaluate model
 echo "evaluating model"
-python src/evaluation/predict.py \
+python src/evaluation/cs_classification_predict.py \
     --model_name_or_path $MODEL_PATH \
     --test_file $TEST_FILE \
     --do_predict \
