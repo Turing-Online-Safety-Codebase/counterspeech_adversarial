@@ -80,23 +80,9 @@ class DataTrainingArguments:
             "If False, will pad the samples dynamically when batching to the maximum length in the batch."
         },
     )
-    train_file: Optional[str] = field(
-        default=None, metadata={"help": "A csv or a json file containing the training data."}
-    )
-    validation_file: Optional[str] = field(
-        default=None, metadata={"help": "A csv or a json file containing the validation data."}
-    )
     test_file: Optional[str] = field(default=None, metadata={"help": "A csv or a json file containing the test data."})
     
     pred_file: Optional[str] = field(default=None, metadata={"help": "The name of the prediction file"})
-
-    def __post_init__(self):
-        train_extension = self.train_file.split(".")[-1]
-        assert train_extension in ["csv", "json"], "`train_file` should be a csv or a json file."
-        validation_extension = self.validation_file.split(".")[-1]
-        assert (
-            validation_extension == train_extension
-        ), "`validation_file` should have the same extension (csv or json) as `train_file`."
 
 @dataclass
 class ModelArguments:
@@ -158,8 +144,13 @@ def main():
 
     # Set seed before initializing model.
     set_seed(training_args.seed)
+    
+    if training_args.do_predict:
+        if data_args.test_file is not None:
+            data_files = {"test": data_args.test_file}
+        else:
+            raise ValueError("Need a test file for `do_predict`.")
 
-    data_files = {}
     for key in data_files.keys():
         logger.info(f"load a local file for {key}: {data_files[key]}")
 

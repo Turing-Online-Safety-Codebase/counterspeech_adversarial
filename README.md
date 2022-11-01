@@ -42,7 +42,28 @@ This will run through each abusive tweet and all their replies in [the directory
 Once the data is labelled, we can start to train counter speech classifiers and collect dynamic adversarial data over multiple iterations. To train/evaluate a counter speech classifier, run
 
 ```
-bash ./scripts/train_model.sh
+python src/train/cs_classification.py \
+    --report_to wandb \
+    --model_name_or_path $MODEL_PATH \
+    --train_file $TRAIN_FILE \
+    --validation_file $VAL_FILE \
+    --test_file $TEST_FILE \
+    --run_name $RUN_NAME \
+    --learning_rate 2e-5 \
+    --num_train_epochs $NUM_EPOCHS \
+    --do_train \
+    --do_eval \
+    --do_predict \
+    --max_seq_length 256 \
+    --per_device_train_batch_size 32 \
+    --evaluation_strategy steps \
+    --eval_steps 100 \
+    --logging_steps 100 \
+    --logging_first_step True \
+    --evaluation_strategy steps \
+    --load_best_model_at_end True \
+    --metric_for_best_model 'f1' \
+    --output_dir $OUTPUT_DIR
 ```
 
 You can specify various training parameters when calling the script.
@@ -54,6 +75,18 @@ To add new adversarial examples to training data after each iteration, run:
 python src/data_preprocessing/add_adversaril_data.py \
     --current_batch <current_iteration> \
     --adversarial_data <filename_of_adversarial_data>
+```
+
+### Evaluate models on a given dataset
+
+```
+python src/evaluation/predict.py \
+    --model_name_or_path $MODEL_PATH \
+    --test_file $TEST_FILE \
+    --do_predict \
+    --max_seq_length 256 \
+    --pred_file $PRED_FILE \
+    --output_dir $OUTPUT_DIR
 ```
 
 ## Running and deallocating on Azure VM
