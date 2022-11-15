@@ -3,7 +3,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import List
 
 class ModelSingleInput(BaseModel):
     context: str
@@ -19,8 +19,8 @@ class ModelSingleOutput(BaseModel):
     prob: ModelSingleOutputProbabilities
 
 class ModelBatchInput(BaseModel):
-    dataset_samples: List[List]
+    __root__: List[ModelSingleInput]
 
-# added
 class ModelBatchOutput(BaseModel):
-    dataset_samples: List[Dict]
+    __root__: List[ModelSingleOutput]
+

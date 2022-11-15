@@ -39,10 +39,13 @@ def create_contexts(input_df, output):
             data = {}
             data["context"] = {}
             data["context"]["context"] = row['abusive_speech']
-            data["context"]["tag"] = 'round1'
-            data["context"]["metadata"] = {}
+            data["tag"] = 'round1'
+            data["metadata"] = {}
             json.dump(data, f)
             f.write("\n")
+
+def convert_to_str(input_id):
+    return str(input_id)
 
 def create_datasets(input_df, output):
     """
@@ -52,6 +55,7 @@ def create_datasets(input_df, output):
     {"uid": "3", "context": "Foo bar", "response": "Some bad responses", "label": "0"}
     """
     input_df['label'] = input_df.apply(lambda x: label_to_id(x['label']), axis=1)
+    input_df['Rep_ID'] = input_df.apply(lambda x: convert_to_str(x['Rep_ID']), axis=1)
     input_df.rename(columns = {'Rep_ID':'uid', 'abusive_speech':'context', 'counter_speech':'response'}, inplace = True)
     df_new = input_df[['uid', 'context', 'response', 'label']]
     df_new.to_json(output, orient='records', lines=True)
@@ -59,7 +63,7 @@ def create_datasets(input_df, output):
 if __name__ == '__main__':
     args = parse_args()
 
-    df_data = pd.read_csv(args.dataset_path)
+    df_data = pd.read_csv(args.dataset_path, encoding='utf8')
     df_data = df_data.astype({'Rep_ID': int})
     create_datasets(df_data, args.output_dataset_path)
 
