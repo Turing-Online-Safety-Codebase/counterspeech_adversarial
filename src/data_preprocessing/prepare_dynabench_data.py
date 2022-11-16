@@ -15,9 +15,9 @@ def parse_args():
     """Parses Command Line Args"""
     parser = argparse.ArgumentParser(description="Process labelled data for modeling")
     parser.add_argument('--dataset_path', type=str, default='data/twitter_plf_data/twitter_plf_labelled/final_data/test_labelled.csv', help='Path to test data for evaluation on Dynabench')
-    parser.add_argument('--output_dataset_path', type=str, default='data/dynabench_data/indomain_test_dataset.jsonl', help='Path to output test data')
+    parser.add_argument('--output_dataset_path', type=str, default='data/dynabench_data/indomain_test_dataset_temp.jsonl', help='Path to output test data')
     parser.add_argument('--contexts_path', type=str, default='data/twitter_plf_data/twitter_plf_labelled/final_data/train_labelled.csv', help='Path to contexts data for adversarial data collection')
-    parser.add_argument('--output_contexts_path', type=str, default='data/dynabench_data/round1_contexts.jsonl', help='Path to output contexts data')
+    parser.add_argument('--output_contexts_path', type=str, default='data/dynabench_data/round1_contexts_temp.jsonl', help='Path to output contexts data')
     args = parser.parse_args()
 
     print("the inputs are:")
@@ -47,6 +47,9 @@ def create_contexts(input_df, output):
 def convert_to_str(input_id):
     return str(input_id)
 
+def convert_to_emojis(text):
+    return text.encode('utf-8', 'replace').decode() #text.encode('latin-1').decode("utf-8")
+
 def create_datasets(input_df, output):
     """
     output format should look like this:    
@@ -56,9 +59,16 @@ def create_datasets(input_df, output):
     """
     input_df['label'] = input_df.apply(lambda x: label_to_id(x['label']), axis=1)
     input_df['Rep_ID'] = input_df.apply(lambda x: convert_to_str(x['Rep_ID']), axis=1)
+    # input_df['abusive_speech'] = input_df.apply(lambda x: convert_to_emojis(x['abusive_speech']), axis=1)
+    # input_df['counter_speech'] = input_df.apply(lambda x: convert_to_emojis(x['counter_speech']), axis=1)
     input_df.rename(columns = {'Rep_ID':'uid', 'abusive_speech':'context', 'counter_speech':'response'}, inplace = True)
     df_new = input_df[['uid', 'context', 'response', 'label']]
     df_new.to_json(output, orient='records', lines=True)
+
+def convert_jsonl_to_emoji(input_js, output_js):
+    df = pd.read_json(input_js, lines=True)
+    df.to_json(output_js, orient='records', lines=True, force_ascii=False)
+
 
 if __name__ == '__main__':
     args = parse_args()
@@ -67,6 +77,9 @@ if __name__ == '__main__':
     df_data = df_data.astype({'Rep_ID': int})
     create_datasets(df_data, args.output_dataset_path)
 
-    df_context = pd.read_csv(args.contexts_path)
+    df_context = pd.read_csv(args.contexts_path, encoding='utf8')
     df_context = df_context.astype({'Rep_ID': int})
     create_contexts(df_context, args.output_contexts_path)
+
+    convert_jsonl_to_emoji(args.output_dataset_path, 'data/dynabench_data/indomain_test_dataset_final.jsonl')
+    convert_jsonl_to_emoji(args.output_contexts_path, 'data/dynabench_data/round1_contexts_final.jsonl')
