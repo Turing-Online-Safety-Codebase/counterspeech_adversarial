@@ -67,6 +67,7 @@ def create_datasets(input_df, output):
 
 def convert_jsonl_to_emoji(input_js, output_js):
     df = pd.read_json(input_js, lines=True)
+    df = df.astype({'uid': str})
     df.to_json(output_js, orient='records', lines=True, force_ascii=False)
 
 
@@ -81,5 +82,5 @@ if __name__ == '__main__':
     df_context = df_context.astype({'Rep_ID': int})
     create_contexts(df_context, args.output_contexts_path)
 
-    convert_jsonl_to_emoji(args.output_dataset_path, 'data/dynabench_data/indomain_test_dataset_final.jsonl')
+    convert_jsonl_to_emoji(args.output_contexts_path, 'data/dynabench_data/indomain_test_dataset_final.jsonl')
     convert_jsonl_to_emoji(args.output_contexts_path, 'data/dynabench_data/round1_contexts_final.jsonl')
