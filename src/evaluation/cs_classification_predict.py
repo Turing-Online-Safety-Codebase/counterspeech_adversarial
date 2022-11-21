@@ -192,6 +192,8 @@ def main():
     non_label_column_names = [name for name in datasets["test"].column_names if name != "label"]
     if "sentence1" in non_label_column_names and "sentence2" in non_label_column_names:
         sentence1_key, sentence2_key = "sentence1", "sentence2"
+    elif 'hateSpeech' in non_label_column_names and 'counterSpeech' in non_label_column_names:
+        sentence1_key, sentence2_key = "hateSpeech", "counterSpeech"
     else:
         sentence1_key, sentence2_key = "abusive_speech", "counter_speech"
 
