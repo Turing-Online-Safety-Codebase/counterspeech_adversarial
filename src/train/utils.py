@@ -8,12 +8,12 @@ def convert_labels(df):
         df (pd.Dataframe): Input dataframe.
     Returns:
         pd.DataFrame: Output dataframe with label columns.
-        int: Number of unique classes.
+        int: Number of examples in the dataframe.
     """
     # Replace label column with int values
     df['label'] = pandas.Categorical(df['label']).codes
-    n_classes = len(df['label'].unique())
-    return df, n_classes
+    n_examples = len(df['label'])
+    return df, n_examples
 
 def load_balanced_n_samples(data_dir, task, split, n_entries):
     """Loads balanced first n entries of training dataset split across 2 classes.

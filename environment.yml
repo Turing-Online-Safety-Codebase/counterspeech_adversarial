@@ -15,6 +15,7 @@ dependencies:
     - ray[tune]
     - wandb
     - evaluate
+    - openprompt
   - absl-py
 
   # Core python
