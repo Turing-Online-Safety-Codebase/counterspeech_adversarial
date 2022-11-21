@@ -25,7 +25,7 @@ def parse_args():
         print(f"{arg} is {getattr(pars_args, arg)}")
     return pars_args
 
-def compute_classification(true, pred, target_names=["not_hateful", "hateful"]):
+def compute_classification(true, pred, target_names=["agree_with_the_posts", "disagree_with_the_posts", "other"]):
     """Computes the number of votes received for each class labelled for an entry.
         Three classes are included: disagree, agree, other.
     Args:
