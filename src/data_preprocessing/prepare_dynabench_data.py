@@ -70,6 +70,16 @@ def convert_jsonl_to_emoji(input_js, output_js):
     df = df.astype({'uid': str})
     df.to_json(output_js, orient='records', lines=True, force_ascii=False)
 
+def convert_label(label):
+    label_dict = {"0":"not_counterspeech", "1":"counterspeech", "2":"other"}
+    return label_dict[label]
+
+def convert_label_int_to_string(input_js, output_js):
+    df = pd.read_json(input_js, lines=True)
+    df = df.astype({'uid': str, 'label':str})
+    # df['label'] = df['label'].apply(str)
+    df['label'] = df.apply(lambda x: convert_label(x['label']), axis=1)
+    df.to_json(output_js, orient='records', lines=True, force_ascii=False)
 
 if __name__ == '__main__':
     args = parse_args()
@@ -84,3 +94,6 @@ if __name__ == '__main__':
 
     convert_jsonl_to_emoji(args.output_contexts_path, 'data/dynabench_data/indomain_test_dataset_final.jsonl')
     convert_jsonl_to_emoji(args.output_contexts_path, 'data/dynabench_data/round1_contexts_final.jsonl')
+
+    convert_label_int_to_string('data/dynabench_data/indomain_test_dataset_final.jsonl', 'data/dynabench_data/indomain_test_dataset_final_final.jsonl')
+
