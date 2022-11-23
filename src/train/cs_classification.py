@@ -385,7 +385,7 @@ def main():
         test_predictions = np.argmax(test_predictions, axis=1)
         logger.info(f"{test_results}")
 
-        compute_classification(test_gold_labels, predictions.tolist())
+        compute_classification(test_gold_labels, test_predictions.tolist())
 
         output_test_file = os.path.join(training_args.output_dir, pred_file)
         if trainer.is_world_process_zero():
