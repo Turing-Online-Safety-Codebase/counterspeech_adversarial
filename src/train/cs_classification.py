@@ -29,6 +29,7 @@ import wandb
 from dataclasses import dataclass, field
 from typing import Optional, Union#, Protocol
 from datasets import load_dataset, load_metric
+from src.evaluation.compute_metrics import compute_classification
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers import (
     AutoConfig,
@@ -355,43 +356,45 @@ def main():
     if training_args.do_eval:
         logger.info("\n*** Evaluate on validation set ***")
 
-        eval_datasets = [eval_dataset]
-        eval_results = {}
-        tasks = ["cs_cls"]
-        for eval_dataset, task in zip(eval_datasets, tasks):
-            eval_result = trainer.evaluate(eval_dataset=eval_dataset)
+        # eval_datasets = [eval_dataset]
+        eval_gold_labels = eval_dataset['label']
+        eval_dataset.remove_columns("label")
+        eval_output = trainer.predict(test_dataset=eval_dataset)
+        eval_predictions, eval_results = eval_output.predictions, eval_output.metrics
+        eval_predictions = np.argmax(eval_predictions, axis=1)
 
-            output_eval_file = os.path.join(training_args.output_dir, "eval_results_on_val_set.txt")
-            if trainer.is_world_process_zero():
-                with open(output_eval_file, "w") as writer:
-                    logger.info("***** Eval results *****")
-                    for key, value in sorted(eval_result.items()):
-                        logger.info(f" {key} = {value}")
-                        writer.write(f"{key} = {value}\n")
-            eval_results.update(eval_result)
+        output_eval_file = os.path.join(training_args.output_dir, "eval_results_on_val_set.txt")
+        if trainer.is_world_process_zero():
+            with open(output_eval_file, "w") as writer:
+                logger.info("***** Eval results *****")
+                for key, value in sorted(eval_results.items()):
+                    key = key.replace("test", "eval")
+                    logger.info(f" {key} = {value}")
+                    writer.write(f"{key} = {value}\n")
 
     # Predict
     if training_args.do_predict:
         logger.info("\n*** Prediction on test set ***")
 
         pred_file = data_args.pred_file if data_args.pred_file is not None else "test_results_on_test_set.csv"
-        test_datasets = [test_dataset]
-        gold_labels = test_dataset['label']
-        # print(test_dataset["label"][:5])
+        
+        test_gold_labels = test_dataset['label']
+        test_dataset.remove_columns("label")
+        test_output = trainer.predict(test_dataset=test_dataset)
+        test_predictions, test_results = test_output.predictions, test_output.metrics
+        test_predictions = np.argmax(test_predictions, axis=1)
+        logger.info(f"{test_results}")
 
-        for test_dataset, task in zip(test_datasets, tasks):
-            test_dataset.remove_columns("label")
-            predictions = trainer.predict(test_dataset=test_dataset).predictions
-            predictions = np.argmax(predictions, axis=1)
+        compute_classification(test_gold_labels, predictions.tolist())
 
-            output_test_file = os.path.join(training_args.output_dir, pred_file)
-            if trainer.is_world_process_zero():
-                with open(output_test_file, "w") as writer:
-                    writer.write("index \t abusive_text \t counter_speech \t label_id \t label \t prediction \n")
-                    for index, item in enumerate(predictions):
-                        item = label_list[item]
-                        writer.write(f"{index} \t {test_dataset[sentence1_key][index]} \t {test_dataset[sentence2_key][index]} \t {label_list[gold_labels[index]]} \t {gold_labels[index]} \t {item} \n")
-                    logger.info("***** Prediction finished *****")
+        output_test_file = os.path.join(training_args.output_dir, pred_file)
+        if trainer.is_world_process_zero():
+            with open(output_test_file, "w") as writer:
+                writer.write("index \t abusive_text \t counter_speech \t label_id \t label \t prediction \n")
+                for index, item in enumerate(test_predictions):
+                    item = label_list[item]
+                    writer.write(f"{index} \t {test_dataset[sentence1_key][index]} \t {test_dataset[sentence2_key][index]} \t {label_list[test_gold_labels[index]]} \t {test_gold_labels[index]} \t {item} \n")
+                logger.info("***** Prediction finished *****")
 
 
 if __name__ == "__main__":
