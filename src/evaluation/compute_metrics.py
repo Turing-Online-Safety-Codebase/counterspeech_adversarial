@@ -2,6 +2,7 @@
     compute F1, precision, recall, accuracy, and confusion matrix"""
 
 import argparse
+import json
 import pandas
 import logging
 import evaluate
@@ -12,18 +13,6 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 
 logger = logging.getLogger(__name__)
 label = ['Agree with the Post', 'Disagree with the Post', 'Other']
-
-def parse_args():
-    parser = argparse.ArgumentParser(description="Model evaluation")
-    parser.add_argument('--gold_data_path', type=str, default='mps_hatemoji_plf_prsp_500.csv', help='data path of model prediction')
-    parser.add_argument('--pred_data_path', type=str, default='', help='data path of gold file')
-    parser.add_argument('--output_path', type=str, required=True, default='', help='data path of output file')
-    pars_args = parser.parse_args()
-
-    print("the inputs are:")
-    for arg in vars(pars_args):
-        print(f"{arg} is {getattr(pars_args, arg)}")
-    return pars_args
 
 def compute_classification(true, pred, target_names=["agree_with_the_posts", "disagree_with_the_posts", "other"]):
     """Computes the number of votes received for each class labelled for an entry.
@@ -42,7 +31,7 @@ def compute_classification(true, pred, target_names=["agree_with_the_posts", "di
     results['recall'] = recall_score(true, pred, average='weighted', zero_division=0)
     results['f1'] = f1_score(true, pred, average='weighted', zero_division=0)
     print(f'--confusion metric-- \n {confusion_matrix(true, pred)}')
-    results['tn, fp, fn, tp'] = confusion_matrix(true, pred, normalize='true').ravel()
+    results['tn, fp, fn, tp'] = confusion_matrix(true, pred, normalize='true').ravel().tolist()
     print("\n--full report--")
     print(classification_report(true, pred, output_dict=False, target_names=target_names))
     return results
@@ -70,18 +59,6 @@ def plot_confusion_matrix(true_labels, prediction, title='confusion metric', nor
     ax.set_ylabel('Gold label')
     ax.set_title(title)
 
-def evalute_classification(df_true, df_pred, output_path):
-    logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler(f"{output_path}.log")
-    log_format = logging.Formatter('%(asctime)s  %(name)s %(levelname)s: %(message)s')
-    handler.setFormatter(log_format)
-    logger.addHandler(handler)
-
-    y_true = df_true['label']
-    y_pred = df_pred['label']
-
-    return compute_classification(y_true, y_pred, target_names=["agree_with_the_posts", "disagree_with_the_posts", "other"])
-
 def evalute_generation(predictions, references):
     """Computes evaluation for generated text.
     Args:
@@ -106,8 +83,44 @@ def evalute_generation(predictions, references):
     results['mauve_results'] = mauve.compute(predictions=predictions, references=references)
     return results
 
-if __name__ == "__main__":
-    args = parse_args()
-    df_gold = pandas.read_csv(args.gold_data_path)
-    df_pred = pandas.read_csv(args.pred_data_path)
-    evalute_classification(df_gold, df_pred, args.output_path)
+def get_cls_results_dict(task, model_name, runtime,
+                      test_true, test_pred,
+                      dev_true, dev_pred,
+                      datetime_str):
+    """Standardizes classification results dictionary.
+
+    Args:
+        task (str): The current task e.g., binary_abuse.
+        model_name (str): The model name (if applicable).
+        runtime (str): The training runtime of the technique in seconds.
+        test_true (np.array): True labels for test set.
+        test_pred (np.array): Pred labels for test set.
+        dev_true (np.array): True labels for dev set.
+        dev_pred (np.array): Pred labels for dev set.
+        datetime_str (str): Current datetime.
+
+    Returns:
+        dict: Dictionary of results.
+    """
+    results_dict = {}
+    results_dict['task'] = task
+    results_dict['model'] = model_name
+    results_dict['train_runtime'] = runtime
+    results_dict['datetime'] = datetime_str
+    results_dict['test_true'] = test_true.tolist()
+    results_dict['test_pred'] = test_pred.tolist()
+    results_dict['dev_true'] = dev_true.tolist()
+    results_dict['dev_pred'] = dev_pred.tolist()
+    return results_dict
+
+
+def save_results(output_dir, datetime_str, results_dict):
+    """Saves results dictionary as a json.
+
+    Args:
+        output_dir (str): Filepath to store results.
+        datetime_str (str): Current datetime for filename.
+        results_dict (dict): Dictionary of results
+    """
+    with open(f'{output_dir}/result_{datetime_str}.json', 'w', encoding="utf-8") as file:
+        json.dump(results_dict, file)
