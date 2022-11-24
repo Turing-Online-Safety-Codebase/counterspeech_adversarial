@@ -21,6 +21,8 @@ import transformers
 import logging
 import os
 import random
+import time
+import datetime
 import re
 import sys
 import numpy as np
@@ -29,7 +31,7 @@ import wandb
 from dataclasses import dataclass, field
 from typing import Optional, Union#, Protocol
 from datasets import load_dataset, load_metric
-from src.evaluation.compute_metrics import compute_classification
+from src.evaluation.compute_metrics import compute_classification, get_cls_results_dict, save_results
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers import (
     AutoConfig,
@@ -44,6 +46,8 @@ from transformers import (
     default_data_collator,
     set_seed,
 )
+
+TASK = 'cs_classification'
 
 # wandb.init()
 wandb.login()
@@ -137,6 +141,10 @@ class ModelArguments:
 
 def main():
 
+    datetime_str = str(datetime.datetime.now())
+    # Measure training run time, run_time will be 0 if n = 0 (i.e. no training)
+    run_time = 0
+
     # See all possible arguments at https://github.com/huggingface/transformers/blob/main/src/transformers/training_args.py
     # or by passing the --help flag to this script.
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
@@ -144,7 +152,7 @@ def main():
 
     # Setup logging
     logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler(f"experiments/experiment_logs/{training_args.run_name}.log")
+    handler = logging.FileHandler(f"experiments/experiment_logs/{training_args.run_name}/{datetime_str}.log")
     format = logging.Formatter('%(asctime)s  %(name)s %(levelname)s: %(message)s')
     handler.setFormatter(format)
     logger.addHandler(handler)
@@ -330,6 +338,7 @@ def main():
 
     # Train
     if training_args.do_train:
+        start = time.time()
         if last_checkpoint is not None:
             checkpoint = last_checkpoint
         elif os.path.isdir(model_args.model_name_or_path):
@@ -351,6 +360,8 @@ def main():
 
             # Need to save the state, since Trainer.save_model saves only the tokenizer with the model
             trainer.state.save_to_json(os.path.join(training_args.output_dir, "trainer_state.json"))
+        end = time.time()
+        run_time = end - start
 
     # Evaluation
     if training_args.do_eval:
@@ -385,7 +396,12 @@ def main():
         test_predictions = np.argmax(test_predictions, axis=1)
         logger.info(f"{test_results}")
 
-        compute_classification(test_gold_labels, test_predictions.tolist())
+        test_results = compute_classification(test_gold_labels, test_predictions.tolist())
+        results_dict = get_cls_results_dict(TASK, model_args.model_name_or_path, run_time,
+                    test_gold_labels, test_predictions,
+                    eval_gold_labels, eval_predictions,
+                    datetime_str)
+        save_results(f"experiments/experiment_logs/{training_args.run_name}", datetime_str, results_dict)
 
         output_test_file = os.path.join(training_args.output_dir, pred_file)
         if trainer.is_world_process_zero():
