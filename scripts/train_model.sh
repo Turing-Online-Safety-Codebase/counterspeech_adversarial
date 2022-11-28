@@ -1,18 +1,20 @@
 #!/bin/bash
 
 export TASK_NAME=path-to-hans
-export MODEL_PATH=microsoft/deberta-v3-small
+export MODEL_PATH=bert-base-cased
 export TRAIN_FILE=data/final_modeling_data/train_labelled.csv
 export VAL_FILE=data/final_modeling_data/val_labelled.csv
 export TEST_FILE=data/final_modeling_data/test_labelled.csv
 export NUM_EPOCHS=3
-export OUTPUT_DIR=experiments/models/iter_0/run1_deberta/
-export RUN_NAME=run1_deberta-v3-small_epoch3_2e-5
+export OUTPUT_DIR=experiments/models/iter_0/run1_bert-base-cased/
+export RUN_NAME=iter0_run1_bert-base-cased_epoch3_2e-5
+
+mkdir experiments/experiment_logs/$RUN_NAME
 
 # train model
 echo "training model"
-python src/train/cs_classification.py \
-    --report_to none \
+python -m src.train.cs_classification \
+    --report_to wandb \
     --model_name_or_path $MODEL_PATH \
     --train_file $TRAIN_FILE \
     --validation_file $VAL_FILE \
@@ -24,7 +26,7 @@ python src/train/cs_classification.py \
     --do_eval \
     --do_predict \
     --max_seq_length 256 \
-    --per_device_train_batch_size 32 \
+    --per_device_train_batch_size 16 \
     --evaluation_strategy steps \
     --eval_steps 100 \
     --logging_steps 100 \
