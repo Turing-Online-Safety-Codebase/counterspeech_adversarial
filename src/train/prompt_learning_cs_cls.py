@@ -9,6 +9,7 @@ import argparse
 import torch
 import pandas
 import time
+import datetime
 import logging
 import numpy
 from openprompt.data_utils import InputExample
@@ -16,11 +17,11 @@ from openprompt.plms import load_plm
 from openprompt.prompts import ManualTemplate, ManualVerbalizer
 from openprompt import PromptForClassification, PromptDataLoader
 from transformers import AdamW
-from evaluation.compute_metrics import compute_classification
+from src.evaluation.compute_metrics import compute_classification, get_cls_results_dict, save_results
 from utils import convert_labels, load_balanced_n_samples
 
-TASK = 'binary_abuse'
-TECH = 'promting'
+TASK = 'cs_classification'
+TECH = 'prompt_engineering'
 
 logger = logging.getLogger(__name__)
 
@@ -39,11 +40,12 @@ def parse_args():
         print(f"{arg} is {getattr(pars_args, arg)}")
     return pars_args
 
-def main(run_name, template, model_name, model_path, use_cuda, n_examples):
+def main(template, model_name, model_path, use_cuda, run_name):
+    datetime_str = str(datetime.datetime.now())
 
     # Setup logging
     logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler(f"experiments/experiment_logs/prompt_engineering/{run_name}.log")
+    handler = logging.FileHandler(f"experiments/experiment_logs/{TASK}/{TECH}/{run_name}/{datetime_str}.log")
     # format = logging.Formatter('%(asctime)s  %(name)s %(levelname)s: %(message)s')
     # handler.setFormatter(format)
     logger.addHandler(handler)
@@ -62,11 +64,10 @@ def main(run_name, template, model_name, model_path, use_cuda, n_examples):
 
     # Define a Verbalizer
     promptVerbalizer = ManualVerbalizer(
-        classes= [0, 1, 2],    # Three classes: 0 for not agreement, 1 for disagreement, and 2 for others
+        classes= [0, 1],    # Two classes: 0 for not abusive and 1 for abusive
         label_words={
-            0: ["agreement"],
-            1: ["disagreement"],
-            2: ['other'],
+            0: ["positive"],
+            1: ["negative"],
         },
         tokenizer=tokenizer,
     )
@@ -104,11 +105,12 @@ def main(run_name, template, model_name, model_path, use_cuda, n_examples):
                 gold_labels = numpy.concatenate((gold_labels, labels.cpu()), axis=0)
                 preds = numpy.concatenate((preds, torch.argmax(logits, dim=-1).cpu()), axis=0)
 
+        # logger.info(f"num of true and prediction: {sum(gold_labels)} and {sum(preds)}")
         # Compute scores
-        results = compute_classification(gold_labels.tolist(), preds.tolist())
-        for key, value in sorted(metrics.items()):
+        test_results = compute_classification(gold_labels.tolist(), preds.tolist())
+        for key, value in sorted(test_results.items()):
             logger.info(f" {key} = {value}")
-        return gold_labels, preds, results
+        return gold_labels, preds, test_results
 
     # Prepare dataset
     raw_dataset = {}
@@ -147,7 +149,7 @@ def main(run_name, template, model_name, model_path, use_cuda, n_examples):
         tokenizer=tokenizer,
         tokenizer_wrapper_class=WrapperClass,
         max_seq_length=256,
-        batch_size=4,
+        batch_size=128,
         shuffle=False,
         teacher_forcing=False,
         predict_eos_token=False,
@@ -158,7 +160,7 @@ def main(run_name, template, model_name, model_path, use_cuda, n_examples):
         template=promptTemplate,
         tokenizer=tokenizer,
         tokenizer_wrapper_class=WrapperClass,
-        max_seq_length=256,
+        max_seq_length=128,
         batch_size=4,
         shuffle=False,
         teacher_forcing=False,
@@ -190,6 +192,14 @@ def main(run_name, template, model_name, model_path, use_cuda, n_examples):
     logger.info("--Perform testing--")
     test_gold_labels, test_preds, test_result = inference(promptModel, test_dataloader)
 
+    datetime_str = str(datetime.datetime.now())
+    results_dict = get_cls_results_dict(TASK, model_name, run_time,
+                    test_gold_labels, test_preds,
+                    val_gold_labels, val_preds,
+                    datetime_str)
+    # add test_result to results_dict
+    results_dict.update(test_result)
+    save_results(f"experiments/experiment_logs/{TASK}/{TECH}", datetime_str, results_dict)
 
 if __name__ == '__main__':
     args = parse_args()
@@ -197,4 +207,4 @@ if __name__ == '__main__':
     num_examples = args.n_examples.split(',')
     templates = 'Response: {"placeholder":"text_b"} | {"mask"}, {"placeholder":"text_a"}'
 
-    main(args.run_name, templates, args.model_name, args.model_path, args.use_cuda, n_examples=5565)
+    main(templates, args.model_name, args.model_path, args.use_cuda, args.run_name)

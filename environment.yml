@@ -16,6 +16,7 @@ dependencies:
     - wandb
     - evaluate
     - openprompt
+    - rouge_score
   - absl-py
 
   # Core python
