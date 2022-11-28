@@ -107,9 +107,9 @@ def get_cls_results_dict(task, model_name, runtime,
     results_dict['model'] = model_name
     results_dict['train_runtime'] = runtime
     results_dict['datetime'] = datetime_str
-    results_dict['test_true'] = test_true.tolist()
+    results_dict['test_true'] = test_true
     results_dict['test_pred'] = test_pred.tolist()
-    results_dict['dev_true'] = dev_true.tolist()
+    results_dict['dev_true'] = dev_true
     results_dict['dev_pred'] = dev_pred.tolist()
     return results_dict
 

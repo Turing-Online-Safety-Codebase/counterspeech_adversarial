@@ -31,7 +31,7 @@ import wandb
 from dataclasses import dataclass, field
 from typing import Optional, Union#, Protocol
 from datasets import load_dataset, load_metric
-from src.evaluation.compute_metrics import compute_classification, get_cls_results_dict, save_results
+from ..evaluation import compute_results
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers import (
     AutoConfig,
@@ -396,12 +396,12 @@ def main():
         test_predictions = np.argmax(test_predictions, axis=1)
         logger.info(f"{test_results}")
 
-        test_results = compute_classification(test_gold_labels, test_predictions.tolist())
-        results_dict = get_cls_results_dict(TASK, model_args.model_name_or_path, run_time,
+        test_results = compute_results.compute_classification(test_gold_labels, test_predictions.tolist())
+        results_dict = compute_results.get_cls_results_dict(TASK, model_args.model_name_or_path, run_time,
                     test_gold_labels, test_predictions,
                     eval_gold_labels, eval_predictions,
                     datetime_str)
-        save_results(f"experiments/experiment_logs/{training_args.run_name}", datetime_str, results_dict)
+        compute_results.save_results(f"experiments/experiment_logs/{training_args.run_name}", datetime_str, results_dict)
 
         output_test_file = os.path.join(training_args.output_dir, pred_file)
         if trainer.is_world_process_zero():
