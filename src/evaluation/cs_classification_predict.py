@@ -21,6 +21,8 @@ import transformers
 import logging
 import os
 import random
+import time
+import datetime
 import re
 import sys
 import numpy as np
@@ -29,6 +31,7 @@ import wandb
 from dataclasses import dataclass, field
 from typing import Optional, Union#, Protocol
 from datasets import load_dataset, load_metric
+from ..evaluation import compute_results
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 from transformers import (
     AutoConfig,
@@ -44,8 +47,9 @@ from transformers import (
     set_seed,
 )
 
+TASK = 'cs_classification'
 # wandb.init()
-# wandb.login()
+wandb.login()
 logger = logging.getLogger(__name__)
 
 def is_main_process(local_rank):
@@ -122,6 +126,9 @@ class ModelArguments:
 
 def main():
 
+    datetime_str = str(datetime.datetime.now())
+    run_time = 0
+
     # See all possible arguments at https://github.com/huggingface/transformers/blob/main/src/transformers/training_args.py
     # or by passing the --help flag to this script.
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
@@ -129,7 +136,7 @@ def main():
 
     # Setup logging
     logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler(f"./run5_footballer_zero-shot.log")
+    handler = logging.FileHandler(f"experiments/experiment_logs/{training_args.run_name}/{datetime_str}.log")
     format = logging.Formatter('%(asctime)s  %(name)s %(levelname)s: %(message)s')
     handler.setFormatter(format)
     logger.addHandler(handler)
@@ -145,15 +152,7 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
     
-    if training_args.do_predict:
-        if data_args.test_file is not None:
-            data_files = {"test": data_args.test_file}
-        else:
-            raise ValueError("Need a test file for `do_predict`.")
-
-    for key in data_files.keys():
-        logger.info(f"load a local file for {key}: {data_files[key]}")
-
+    data_files = {"test": data_args.test_file}
     datasets = load_dataset("csv", data_files=data_files)
     logger.info(f"data structure is: {datasets}")
 
@@ -239,8 +238,7 @@ def main():
         return result
 
     datasets = datasets.map(preprocess_function, batched=True, load_from_cache_file=not data_args.overwrite_cache)
-    if data_args.test_file is not None:
-        test_dataset = datasets["test"]
+    test_dataset = datasets["test"]
 
     # define metric (use accuracy and f1)
     # Custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
@@ -283,24 +281,30 @@ def main():
         logger.info("\n*** Prediction on test set ***")
 
         pred_file = data_args.pred_file if data_args.pred_file is not None else "test_results_on_test_set.csv"
-        test_datasets = [test_dataset]
-        gold_labels = test_dataset['label']
-        tasks = ["cs_cls"]
-        # print(test_dataset["label"][:5])
 
-        for test_dataset, task in zip(test_datasets, tasks):
-            test_dataset.remove_columns("label")
-            predictions = trainer.predict(test_dataset=test_dataset).predictions
-            predictions = np.argmax(predictions, axis=1)
+        test_gold_labels = test_dataset['label']
+        test_dataset.remove_columns("label")
+        test_output = trainer.predict(test_dataset=test_dataset)
+        test_predictions, test_results = test_output.predictions, test_output.metrics
+        test_predictions = np.argmax(test_predictions, axis=1)
+        logger.info(f"{test_results}")
 
-            output_test_file = os.path.join(training_args.output_dir, pred_file)
-            if trainer.is_world_process_zero():
-                with open(output_test_file, "w") as writer:
-                    writer.write("index \t abusive_text \t counter_speech \t label_id \t label \t prediction \n")
-                    for index, item in enumerate(predictions):
-                        item = label_list[item]
-                        writer.write(f"{index} \t {test_dataset[sentence1_key][index]} \t {test_dataset[sentence2_key][index]} \t {label_list[gold_labels[index]]} \t {gold_labels[index]} \t {item} \n")
-                    logger.info("***** Prediction finished *****")
+        eval_gold_labels=[], eval_predictions=np.array([])
+        test_results = compute_results.compute_classification(test_gold_labels, test_predictions.tolist())
+        results_dict = compute_results.get_cls_results_dict(TASK, model_args.model_name_or_path, run_time,
+                    test_gold_labels, test_predictions,
+                    eval_gold_labels, eval_predictions,
+                    datetime_str)
+        compute_results.save_results(f"experiments/experiment_logs/{training_args.run_name}", datetime_str, results_dict)
+
+        output_test_file = os.path.join(training_args.output_dir, pred_file)
+        if trainer.is_world_process_zero():
+            with open(output_test_file, "w") as writer:
+                writer.write("index \t abusive_text \t counter_speech \t label_id \t label \t prediction \n")
+                for index, item in enumerate(test_predictions):
+                    item = label_list[item]
+                    writer.write(f"{index} \t {test_dataset[sentence1_key][index]} \t {test_dataset[sentence2_key][index]} \t {label_list[test_gold_labels[index]]} \t {test_gold_labels[index]} \t {item} \n")
+                logger.info("***** Prediction finished *****")
 
 
 if __name__ == "__main__":
