@@ -49,7 +49,7 @@ from transformers import (
 )
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 
-wandb.login()
+# wandb.login()
 
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
@@ -185,7 +185,7 @@ def main():
 
     # Setup logging
     logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler(f"experiments/experiment_logs/{training_args.run_name}/{datetime_str}.log")
+    handler = logging.FileHandler(f"experiments/experiment_logs/{datetime_str}.log")
     format = logging.Formatter('%(asctime)s  %(name)s %(levelname)s: %(message)s')
     handler.setFormatter(format)
     logger.addHandler(handler)

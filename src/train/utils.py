@@ -15,8 +15,9 @@ def convert_labels(df):
     n_examples = len(df['label'])
     return df, n_examples
 
-def load_balanced_n_samples(data_dir, task, split, n_entries):
+def load_balanced_n_samples(data_dir, n_entries):
     """Loads balanced first n entries of training dataset split across 2 classes.
+
     Args:
         data_dir (str): Directory with data.
         task (str): Task name e.g. abuse
@@ -26,11 +27,11 @@ def load_balanced_n_samples(data_dir, task, split, n_entries):
         pd.DataFrame: Dataset of n rows.
     """
     SEED = 123
-    balanced_n = int(n_entries/2)
-    df = pandas.read_csv(f'{data_dir}/{task}/clean_data/{task}_{split}.csv')
-    df_agree = df[df['label'] == 0].head(balanced_n)
-    df_disagree = df[df['label'] == 1].head(balanced_n)
-    df_other = df[df['label'] == 2].head(balanced_n)
-    df_concat = pandas.concat([df_agree, df_disagree, df_other])
+    balanced_n = int(n_entries/3)
+    df = pandas.read_csv(data_dir)
+    df_not_cs = df[df['label'] == 'agrees_with_the_post'].head(balanced_n)
+    df_cs = df[df['label'] == 'disagrees_with_the_post'].head(balanced_n)
+    df_other = df[df['label'] == 'other'].head(balanced_n)
+    df_concat = pandas.concat([df_not_cs, df_cs, df_other])
     shuffled_df = shuffle(df_concat, random_state = SEED)
     return shuffled_df

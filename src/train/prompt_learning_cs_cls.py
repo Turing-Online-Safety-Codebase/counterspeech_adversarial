@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 """
-Runs Prompt engineering experiments. (in progress)
+Prompt engineering experiments.
 """
 
 import argparse
@@ -17,7 +17,7 @@ from openprompt.plms import load_plm
 from openprompt.prompts import ManualTemplate, ManualVerbalizer
 from openprompt import PromptForClassification, PromptDataLoader
 from transformers import AdamW
-from src.evaluation.compute_metrics import compute_classification, get_cls_results_dict, save_results
+from ..evaluation import compute_results
 from utils import convert_labels, load_balanced_n_samples
 
 TASK = 'cs_classification'
@@ -32,6 +32,7 @@ def parse_args():
     parser.add_argument('--model_name', type=str, default='bert', help='name of the model')
     parser.add_argument('--model_path', type=str, default='bert-base-cased', help='path to the model')
     parser.add_argument('--use_cuda', type=bool, default=True, help='if using cuda')
+    parser.add_argument('--balanced_train', type=bool, default=False, help='Whether training data is balanced by class label')
     parser.add_argument('--eval_steps', type=int, default='4', help='num of update steps between two evaluations')
     pars_args = parser.parse_args()
 
@@ -40,12 +41,12 @@ def parse_args():
         print(f"{arg} is {getattr(pars_args, arg)}")
     return pars_args
 
-def main(template, model_name, model_path, use_cuda, run_name):
+def main(template, n_examples, model_name, model_path, use_cuda, balanced_train):
     datetime_str = str(datetime.datetime.now())
 
     # Setup logging
     logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler(f"experiments/experiment_logs/{TASK}/{TECH}/{run_name}/{datetime_str}.log")
+    handler = logging.FileHandler(f"experiments/experiment_logs/{TASK}/{TECH}/{datetime_str}.log")
     # format = logging.Formatter('%(asctime)s  %(name)s %(levelname)s: %(message)s')
     # handler.setFormatter(format)
     logger.addHandler(handler)
@@ -64,10 +65,11 @@ def main(template, model_name, model_path, use_cuda, run_name):
 
     # Define a Verbalizer
     promptVerbalizer = ManualVerbalizer(
-        classes= [0, 1],    # Two classes: 0 for not abusive and 1 for abusive
+        classes= [0, 1, 2],    # Two classes: 0 for not abusive and 1 for abusive
         label_words={
-            0: ["positive"],
-            1: ["negative"],
+            0: ["negative"],
+            1: ["positive"],
+            2: ["other"],
         },
         tokenizer=tokenizer,
     )
@@ -107,7 +109,7 @@ def main(template, model_name, model_path, use_cuda, run_name):
 
         # logger.info(f"num of true and prediction: {sum(gold_labels)} and {sum(preds)}")
         # Compute scores
-        test_results = compute_classification(gold_labels.tolist(), preds.tolist())
+        test_results = compute_results.compute_classification(gold_labels.tolist(), preds.tolist())
         for key, value in sorted(test_results.items()):
             logger.info(f" {key} = {value}")
         return gold_labels, preds, test_results
@@ -115,6 +117,8 @@ def main(template, model_name, model_path, use_cuda, run_name):
     # Prepare dataset
     raw_dataset = {}
     raw_dataset['train'] = pandas.read_csv("data/final_modeling_data/train_labelled.csv")
+    if balanced_train:
+        raw_dataset['train'] = load_balanced_n_samples("data/final_modeling_data/train_labelled.csv", int(n_examples))
     raw_dataset['val'] = pandas.read_csv("data/final_modeling_data/val_labelled.csv")
     raw_dataset['test'] = pandas.read_csv("data/final_modeling_data/test_labelled.csv")
     raw_dataset['train'], n_train_examples = convert_labels(raw_dataset['train'])
@@ -160,8 +164,8 @@ def main(template, model_name, model_path, use_cuda, run_name):
         template=promptTemplate,
         tokenizer=tokenizer,
         tokenizer_wrapper_class=WrapperClass,
-        max_seq_length=128,
-        batch_size=4,
+        max_seq_length=256,
+        batch_size=128,
         shuffle=False,
         teacher_forcing=False,
         predict_eos_token=False,
@@ -193,13 +197,13 @@ def main(template, model_name, model_path, use_cuda, run_name):
     test_gold_labels, test_preds, test_result = inference(promptModel, test_dataloader)
 
     datetime_str = str(datetime.datetime.now())
-    results_dict = get_cls_results_dict(TASK, model_name, run_time,
+    results_dict = compute_results.get_cls_results_dict(TASK, model_name, run_time,
                     test_gold_labels, test_preds,
                     val_gold_labels, val_preds,
                     datetime_str)
     # add test_result to results_dict
     results_dict.update(test_result)
-    save_results(f"experiments/experiment_logs/{TASK}/{TECH}", datetime_str, results_dict)
+    compute_results.save_results(f"experiments/experiment_logs/{TASK}/{TECH}", datetime_str, results_dict)
 
 if __name__ == '__main__':
     args = parse_args()
@@ -207,4 +211,5 @@ if __name__ == '__main__':
     num_examples = args.n_examples.split(',')
     templates = 'Response: {"placeholder":"text_b"} | {"mask"}, {"placeholder":"text_a"}'
 
-    main(templates, args.model_name, args.model_path, args.use_cuda, args.run_name)
+    for num in num_examples:
+        main(templates, num, args.model_name, args.model_path, args.use_cuda, args.balanced_train)

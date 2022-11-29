@@ -243,7 +243,10 @@ def main():
             else:
                 input_ids = encoded_prompt
 
-            while "<EOCN>" not in text:
+            num_attempts = 0
+
+            while "<EOCN>" not in text and num_attempts <= 3:
+                num_attempts += 1
 
                 output_sequences = model.generate(
                     input_ids=input_ids,
@@ -293,8 +296,8 @@ def main():
             
             output_clean_file.write(clean_output + "\n")
 
-            output_raw_file.close()
-            output_clean_file.close()
+    output_raw_file.close()
+    output_clean_file.close()
 
     return generated_sequences
 
