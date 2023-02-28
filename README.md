@@ -93,12 +93,12 @@ python -m src.evaluation.cs_classification_predict.py \
 ```
 
 
-## Counter speech generation through adversarial training
+## Counter speech generation
 
 ### Model training and evaluation
 ```
 python src/train/cs_generation.py \
-    --report_to none \
+    --report_to wandb \
     --model_name_or_path $MODEL_PATH \
     --train_file $TRAIN_FILE \
     --validation_file $VAL_FILE \
@@ -106,11 +106,9 @@ python src/train/cs_generation.py \
     --learning_rate 2e-5 \
     --num_train_epochs $NUM_EPOCHS \
     --do_train \
-    --do_eval \
-    --do_predict \
-    --per_device_train_batch_size 32 \
+    --per_device_train_batch_size 4 \
     --evaluation_strategy steps \
-    --eval_steps 500 \
+    --eval_steps 100 \
     --logging_steps 100 \
     --logging_first_step True \
     --evaluation_strategy steps \
