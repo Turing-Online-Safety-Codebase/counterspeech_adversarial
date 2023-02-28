@@ -17,7 +17,6 @@
 
 """ 
 This script is adapted from run_generation.py from HuggingFace for counter speech generation.
-
 Conditional text generation with the auto-regressive models of the library (GPT/GPT-2/CTRL/Transformer-XL/XLNet)
 """
 
@@ -27,7 +26,9 @@ import logging
 
 import numpy as np
 import torch
-
+import datetime
+import pandas
+from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM, AutoModelForSequenceClassification, AutoModelForSeq2SeqLM
 from transformers import (
     CTRLLMHeadModel,
     CTRLTokenizer,
@@ -61,6 +62,9 @@ MODEL_CLASSES = {
     "transfo-xl": (TransfoXLLMHeadModel, TransfoXLTokenizer),
     "xlm": (XLMWithLMHeadModel, XLMTokenizer),
 }
+
+# MODEL_CONFIG_CLASSES = list(MODEL_FOR_CAUSAL_LM_MAPPING.keys())
+# MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 
 # Padding text to help Transformer-XL and XLNet with short prompts as proposed by Aman Rusia
 # in https://github.com/rusiaaman/XLNet-gen#methodology
@@ -115,13 +119,6 @@ def prepare_xlm_input(args, model, tokenizer, prompt_text):
 
         model.config.lang_id = model.config.lang2id[language]
         # kwargs["language"] = tokenizer.lang2id[language]
-
-    # TODO fix mask_token_id setup when configurations will be synchronized between models and tokenizers
-    # XLM masked-language modeling (MLM) models need masked token
-    # is_xlm_mlm = "mlm" in args.model_name_or_path
-    # if is_xlm_mlm:
-    #     kwargs["mask_token_id"] = tokenizer.mask_token_id
-
     return prompt_text
 
 
@@ -154,6 +151,30 @@ def adjust_length_to_model(length, max_sequence_length):
         length = MAX_LENGTH  # avoid infinite loop
     return length
 
+def abuse_filter(abusive_text, sequence, df, regeneration_needed):
+    # TODO: a classifier that can classify if a generated text is abusive 
+    # To be used in the generation pipeline
+    model_name = "experiments/models/iter_0/run1_final_deberta"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name)
+    label_dict = {0: 'agrees_with_the_post', 1: 'disagrees_with_the_post', 2: 'other'}
+
+    predict = tokenizer(abusive_text, sequence, return_tensors="pt")
+    logits = model(**predict).logits
+    scores = torch.softmax(logits, dim=1)
+    pred_prob_list = scores.tolist()[0]
+    pred_indice = scores.argmax().item()
+
+    if pred_indice == 0:
+        regeneration_needed = True
+        print("It is abuse. Regeneration is needed")
+        # print(f"Confidence counter speech is {int(round(pred_prob_list[1] * 100))}%.\nConfidence not_counter_speech is {int(round(pred_prob_list[0] * 100))}%\nConfidence other is {int(round(pred_prob_list[2] * 100))}%")
+    else:
+        regeneration_needed = False
+    # append data
+    new_row = {'abusive_speech':abusive_text, 'response': sequence, 'pred_label': pred_indice, 'pred_prob': pred_prob_list[pred_indice]}
+    df1 = df.append(new_row, ignore_index=True)
+    return regeneration_needed, df
 
 def main():
     parser = argparse.ArgumentParser()
@@ -181,6 +202,7 @@ def main():
     parser.add_argument("--no_cuda", action="store_true", help="Avoid using CUDA when available")
     parser.add_argument("--num_return_sequences", type=int, default=1, help="The number of samples to generate.")
     parser.add_argument("--fp16", action="store_true", help="Whether to use 16-bit (mixed) precision (through NVIDIA apex) instead of 32-bit")
+    parser.add_argument("--seq2seqlm", action="store_true", help="If using sequence-to-sequence LMs. Default to False.")
     args = parser.parse_args()
 
     args.device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
@@ -191,23 +213,28 @@ def main():
     set_seed(args)
 
     # Initialize the model and tokenizer
-    try:
-        args.model_type = args.model_type.lower()
-        model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
-    except KeyError:
-        raise KeyError("the model {} you specified is not supported. You are welcome to add it and open a PR :)")
+    config = AutoConfig.from_pretrained(args.model_name_or_path)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
 
-    tokenizer = tokenizer_class.from_pretrained(args.model_name_or_path)
-    model = model_class.from_pretrained(args.model_name_or_path)
+    if args.seq2seqlm:
+        model = AutoModelForSeq2SeqLM.from_pretrained(
+            args.model_name_or_path,
+            from_tf=bool(".ckpt" in args.model_name_or_path),
+            config=config,
+            )
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model_name_or_path,
+            from_tf=bool(".ckpt" in args.model_name_or_path),
+            config=config,
+        )
     model.to(args.device)
 
     if args.fp16:
         model.half()
 
-    args.length = adjust_length_to_model(args.length, max_sequence_length=model.config.max_position_embeddings)
+    # args.length = adjust_length_to_model(args.length, max_sequence_length=model.config.max_position_embeddings)
     logger.info(args)
-
-    # prompt_text = args.prompt if args.prompt else input("Model prompt >>> ")
 
     output_raw_file = open(args.output_raw_file_path, "w")
     output_clean_file = open(args.output_clean_file_path, "w")
@@ -215,8 +242,6 @@ def main():
         for line in test_f:
             text = ""
             prompt_text = line.replace("\n", "")
-            # output_file.write(prompt_text + "\n")
-            # print(prompt_text)
 
             # Different models need different input formatting and/or extra arguments
             requires_preprocessing = args.model_type in PREPROCESSING_FUNCTIONS.keys()
@@ -244,18 +269,24 @@ def main():
                 input_ids = encoded_prompt
 
             num_attempts = 0
+            # TODO: setup a variable for whether to regenerate for poor generation
+            regenerate = True
 
-            while "<EOCN>" not in text and num_attempts <= 3:
+            # TODO: inject an abuse classifier in the pipeline
+            # Set this abuse classifier option as a parameter that can be optional
+            while "<END>" not in text:
                 num_attempts += 1
 
                 output_sequences = model.generate(
                     input_ids=input_ids,
-                    max_length=args.length + len(encoded_prompt[0]),
                     temperature=args.temperature,
                     top_k=args.k,
                     top_p=args.p,
                     repetition_penalty=args.repetition_penalty,
                     do_sample=True,
+                    min_length=10, 
+                    # max_length=args.length + len(encoded_prompt[0]),
+                    max_length=128,
                     num_return_sequences=args.num_return_sequences,
                 )
 
@@ -280,15 +311,16 @@ def main():
                         prompt_text + text[len(tokenizer.decode(encoded_prompt[0], clean_up_tokenization_spaces=True)) :]
                     )
                     output = text.replace(prompt_text, "")
-                    clean_output = " ".join(output.split()).replace("<EOCN>", "")
+                    clean_output = " ".join(output.split(' <END>'))[0]
 
                     # generated_sequences.append(total_sequence)
                     print("HS:", prompt_text)
                     print("CS:", output)
-                    # print(total_sequence)
+                    print("CO:", clean_output)
 
-                    if "<EOCN>" in output:
-                        break
+                if "<END>" in output or num_attempts > 3:
+                    break
+                # regenerate, df_generation = abuse_filter(prompt_text, clean_output, df_generation)
 
             print("====== New Entry======")
             output_raw_file.write("====== New Entry======" + "\n")
