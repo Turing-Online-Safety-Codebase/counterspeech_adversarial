@@ -14,12 +14,7 @@
 # limitations under the License.
 """
 This script is adapted from run_clm.py from HuggingFace for counter speech generation.
-Fine-tuning the library models for causal language modeling (GPT, GPT-2, CTRL, ...) on a text file or a dataset.
-
-Here is the full list of checkpoints on the hub that can be fine-tuned by this script:
-https://huggingface.co/models?filter=causal-lm
 """
-# You can also adapt this script on your own causal language modeling task. Pointers for this are left as comments.
 
 import logging
 import math
@@ -49,7 +44,7 @@ from transformers import (
 )
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
 
-# wandb.login()
+wandb.login()
 
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
@@ -164,7 +159,6 @@ def main():
     # See all possible arguments in src/transformers/training_args.py
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
-
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
@@ -205,35 +199,13 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
-    # Get the test dataset: CSV/JSON test file
-    # Use as labels the column called 'label' and as pair of sentences the
-    # sentences in columns called 'sentence1' and 'sentence2' or 'abusive_speech' and 'counter_speech'.
-    data_files = {"train": data_args.train_file, "validation": data_args.validation_file}
-    
-    for key in data_files.keys():
-        logger.info(f"load a local file for {key}: {data_files[key]}")
-
-    datasets = load_dataset("text", data_files=data_files)
-    logger.info(f"data structure is: {datasets}")
-
     # Load pretrained model and tokenizer
-    #
-    # Distributed training:
-    # The .from_pretrained methods guarantee that only one local process can concurrently
-    # download model & vocab.
-
     config_kwargs = {
         "cache_dir": model_args.cache_dir,
         "revision": model_args.model_revision,
         "use_auth_token": True if model_args.use_auth_token else None,
     }
-    if model_args.config_name:
-        config = AutoConfig.from_pretrained(model_args.config_name, **config_kwargs)
-    elif model_args.model_name_or_path:
-        config = AutoConfig.from_pretrained(model_args.model_name_or_path, **config_kwargs)
-    else:
-        config = CONFIG_MAPPING[model_args.model_type]()
-        logger.warning("You are instantiating a new config instance from scratch.")
+    config = AutoConfig.from_pretrained(model_args.model_name_or_path, **config_kwargs)
 
     tokenizer_kwargs = {
         "cache_dir": model_args.cache_dir,
@@ -241,33 +213,30 @@ def main():
         "revision": model_args.model_revision,
         "use_auth_token": True if model_args.use_auth_token else None,
     }
-    if model_args.tokenizer_name:
-        tokenizer = AutoTokenizer.from_pretrained(model_args.tokenizer_name, **tokenizer_kwargs)
-    elif model_args.model_name_or_path:
-        tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path, **tokenizer_kwargs)
-    else:
-        raise ValueError(
-            "You are instantiating a new tokenizer from scratch. This is not supported by this script."
-            "You can do it from another script, save it, and load it from here, using --tokenizer_name."
-        )
+    tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path, **tokenizer_kwargs)
 
-    if model_args.model_name_or_path:
-        model = AutoModelForCausalLM.from_pretrained(
-            model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
-            config=config,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-    else:
-        logger.info("Training new model from scratch")
-        model = AutoModelForCausalLM.from_config(config)
+    model = AutoModelForCausalLM.from_pretrained(
+        model_args.model_name_or_path,
+        from_tf=bool(".ckpt" in model_args.model_name_or_path),
+        config=config,
+        cache_dir=model_args.cache_dir,
+        revision=model_args.model_revision,
+        use_auth_token=True if model_args.use_auth_token else None,
+    )
 
     # We resize the embeddings only when necessary to avoid index errors. 
     embedding_size = model.get_input_embeddings().weight.shape[0]
     if len(tokenizer) > embedding_size:
         model.resize_token_embeddings(len(tokenizer))
+
+    # Load datasets
+    data_files = {"train": data_args.train_file}
+    if data_args.validation_file is not None:
+        data_files["validation"] = data_args.validation_file
+    for key in data_files.keys():
+        logger.info(f"load a local file for {key}: {data_files[key]}")
+    datasets = load_dataset("text", data_files=data_files)
+    logger.info(f"data structure is: {datasets}")
 
     # Preprocessing the datasets.
     # First we tokenize all the texts.
@@ -278,7 +247,7 @@ def main():
     text_column_name = "text" if "text" in column_names else column_names[0]
 
     def tokenize_function(examples):
-        return tokenizer(examples[text_column_name])
+        return tokenizer(examples[text_column_name], padding="max_length", truncation=True, max_length=128)
 
     tokenized_datasets = datasets.map(
         tokenize_function,
@@ -337,11 +306,11 @@ def main():
     )
 
     def preprocess_logits_for_metrics(logits, labels):
-            if isinstance(logits, tuple):
-                # Depending on the model and config, logits may contain extra tensors,
-                # like past_key_values, but logits always come first
-                logits = logits[0]
-            return logits.argmax(dim=-1)
+        if isinstance(logits, tuple):
+            # Depending on the model and config, logits may contain extra tensors,
+            # like past_key_values, but logits always come first
+            logits = logits[0]
+        return logits.argmax(dim=-1)
 
     def compute_metrics(eval_preds):
         acc = evaluate.load("accuracy")
@@ -373,6 +342,7 @@ def main():
             checkpoint = model_args.model_name_or_path
         else:
             checkpoint = None
+        logger.info(f'checkpoint is {checkpoint}.')
         train_result = trainer.train(resume_from_checkpoint=checkpoint)
         trainer.save_model()  # Saves the tokenizer too for easy upload
 
