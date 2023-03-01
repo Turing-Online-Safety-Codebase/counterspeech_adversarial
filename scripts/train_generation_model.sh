@@ -21,9 +21,10 @@ python src/train/cs_generation.py \
     --do_train \
     --per_device_train_batch_size 4 \
     --evaluation_strategy steps \
-    --eval_steps 100 \
-    --logging_steps 100 \
+    --eval_steps 1000 \
+    --logging_steps 1000 \
     --logging_first_step True \
-    --evaluation_strategy steps \
+    --save_strategy steps \
+    --save_steps 2000 \
     --load_best_model_at_end True \
     --output_dir $OUTPUT_DIR
