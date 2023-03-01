@@ -236,6 +236,9 @@ def main():
     # args.length = adjust_length_to_model(args.length, max_sequence_length=model.config.max_position_embeddings)
     logger.info(args)
 
+    # create a dataframe containing generaion text that is abusive
+    # df_generation = pandas.DataFrame({'abusive_speech':[], 'response': [], 'pred_label': [], 'pred_prob': []})
+
     output_raw_file = open(args.output_raw_file_path, "w")
     output_clean_file = open(args.output_clean_file_path, "w")
     with open(args.test_file) as test_f:
@@ -297,7 +300,7 @@ def main():
                 generated_sequences = []
 
                 for generated_sequence_idx, generated_sequence in enumerate(output_sequences):
-                    print("=== GENERATED SEQUENCE {} ===".format(generated_sequence_idx + 1))
+                    print(f"=== GENERATED SEQUENCE {generated_sequence_idx + 1}, NUM ATTEMPTS: {num_attempts} ===")
                     generated_sequence = generated_sequence.tolist()
 
                     # Decode text
@@ -307,11 +310,11 @@ def main():
                     text = text[: text.find(args.stop_token) if args.stop_token else None]
 
                     # Add the prompt at the beginning of the sequence. Remove the excess text that was used for pre-processing
-                    total_sequence = (
-                        prompt_text + text[len(tokenizer.decode(encoded_prompt[0], clean_up_tokenization_spaces=True)) :]
-                    )
+                    # total_sequence = (
+                    #     prompt_text + text[len(tokenizer.decode(encoded_prompt[0], clean_up_tokenization_spaces=True)) :]
+                    # )
                     output = text.replace(prompt_text, "")
-                    clean_output = " ".join(output.split(' <END>'))[0]
+                    clean_output = output.split(' <END>')[0].replace('</s>', '').replace('<pad>', '').strip()
 
                     # generated_sequences.append(total_sequence)
                     print("HS:", prompt_text)
