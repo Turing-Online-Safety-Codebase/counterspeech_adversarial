@@ -96,6 +96,8 @@ python -m src.evaluation.cs_classification_predict.py \
 ## Counter speech generation
 
 ### Model training and evaluation
+To train/evaluate a counter speech generator, run
+
 ```
 python src/train/cs_generation.py \
     --report_to wandb \
@@ -111,7 +113,8 @@ python src/train/cs_generation.py \
     --eval_steps 100 \
     --logging_steps 100 \
     --logging_first_step True \
-    --evaluation_strategy steps \
+    --save_strategy steps \
+    --save_steps 2000 \
     --load_best_model_at_end True \
     --output_dir $OUTPUT_DIR
 ```
