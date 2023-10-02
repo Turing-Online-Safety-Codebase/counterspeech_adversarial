@@ -14,7 +14,12 @@
 # limitations under the License.
 """
 This script is adapted from run_clm.py from HuggingFace for counter speech generation.
+Fine-tuning the library models for causal language modeling (GPT, GPT-2, CTRL, ...) on a text file or a dataset.
+
+Here is the full list of checkpoints on the hub that can be fine-tuned by this script:
+https://huggingface.co/models?filter=causal-lm
 """
+# You can also adapt this script on your own causal language modeling task. Pointers for this are left as comments.
 
 import logging
 import math
@@ -22,8 +27,11 @@ import os
 import time
 import datetime
 import sys
-import wandb
+# import wandb
 import evaluate
+import nltk
+import numpy as np
+from nltk.tokenize import sent_tokenize
 from dataclasses import dataclass, field
 from typing import Optional
 from itertools import chain
@@ -35,16 +43,20 @@ from transformers import (
     MODEL_FOR_CAUSAL_LM_MAPPING,
     AutoConfig,
     AutoModelForCausalLM,
+    AutoModelForSeq2SeqLM,
     AutoTokenizer,
     HfArgumentParser,
     Trainer,
     TrainingArguments,
     default_data_collator,
+    DataCollatorForSeq2Seq,
+    Seq2SeqTrainingArguments, 
+    Seq2SeqTrainer,
     set_seed,
 )
 from transformers.trainer_utils import get_last_checkpoint, is_main_process
-
-wandb.login()
+nltk.download("punkt")
+# wandb.login()
 
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
@@ -100,7 +112,9 @@ class ModelArguments:
             "with private models)."
         },
     )
-
+    seq2seqlm: bool = field(
+        default=False, metadata={"help": "If using sequence-to-sequence LMs. Default to False."},
+    )
 
 @dataclass
 class DataTrainingArguments:
@@ -159,6 +173,7 @@ def main():
     # See all possible arguments in src/transformers/training_args.py
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
+
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
@@ -199,13 +214,37 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
+    # Get the test dataset: CSV/JSON test file    
+    data_files = {"train": data_args.train_file}
+    if data_args.validation_file is not None:
+        data_files["validation"] = data_args.validation_file
+    
+    for key in data_files.keys():
+        logger.info(f"load a local file for {key}: {data_files[key]}")
+
+    datasets = load_dataset("csv", data_files=data_files)
+    datasets["validation"] = datasets["validation"].shuffle().select(range(2000))
+
+    logger.info(f"data structure is: {datasets}")
+
     # Load pretrained model and tokenizer
+    #
+    # Distributed training:
+    # The .from_pretrained methods guarantee that only one local process can concurrently
+    # download model & vocab.
+
     config_kwargs = {
         "cache_dir": model_args.cache_dir,
         "revision": model_args.model_revision,
         "use_auth_token": True if model_args.use_auth_token else None,
     }
-    config = AutoConfig.from_pretrained(model_args.model_name_or_path, **config_kwargs)
+    if model_args.config_name:
+        config = AutoConfig.from_pretrained(model_args.config_name, **config_kwargs)
+    elif model_args.model_name_or_path:
+        config = AutoConfig.from_pretrained(model_args.model_name_or_path, **config_kwargs)
+    else:
+        config = CONFIG_MAPPING[model_args.model_type]()
+        logger.warning("You are instantiating a new config instance from scratch.")
 
     tokenizer_kwargs = {
         "cache_dir": model_args.cache_dir,
@@ -213,30 +252,42 @@ def main():
         "revision": model_args.model_revision,
         "use_auth_token": True if model_args.use_auth_token else None,
     }
-    tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path, **tokenizer_kwargs)
+    if model_args.tokenizer_name:
+        tokenizer = AutoTokenizer.from_pretrained(model_args.tokenizer_name, **tokenizer_kwargs)
+    elif model_args.model_name_or_path:
+        tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path, **tokenizer_kwargs)
+    else:
+        raise ValueError(
+            "You are instantiating a new tokenizer from scratch. This is not supported by this script."
+            "You can do it from another script, save it, and load it from here, using --tokenizer_name."
+        )
 
-    model = AutoModelForCausalLM.from_pretrained(
-        model_args.model_name_or_path,
-        from_tf=bool(".ckpt" in model_args.model_name_or_path),
-        config=config,
-        cache_dir=model_args.cache_dir,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-    )
+    if model_args.model_name_or_path:
+        if model_args.seq2seqlm:
+            model = AutoModelForSeq2SeqLM.from_pretrained(
+                model_args.model_name_or_path,
+                from_tf=bool(".ckpt" in model_args.model_name_or_path),
+                config=config,
+                cache_dir=model_args.cache_dir,
+                revision=model_args.model_revision,
+                use_auth_token=True if model_args.use_auth_token else None,)
+        else:
+            model = AutoModelForCausalLM.from_pretrained(
+                model_args.model_name_or_path,
+                from_tf=bool(".ckpt" in model_args.model_name_or_path),
+                config=config,
+                cache_dir=model_args.cache_dir,
+                revision=model_args.model_revision,
+                use_auth_token=True if model_args.use_auth_token else None,
+            )
+    else:
+        logger.info("Training new model from scratch")
+        model = AutoModelForCausalLM.from_config(config)
 
     # We resize the embeddings only when necessary to avoid index errors. 
     embedding_size = model.get_input_embeddings().weight.shape[0]
     if len(tokenizer) > embedding_size:
         model.resize_token_embeddings(len(tokenizer))
-
-    # Load datasets
-    data_files = {"train": data_args.train_file}
-    if data_args.validation_file is not None:
-        data_files["validation"] = data_args.validation_file
-    for key in data_files.keys():
-        logger.info(f"load a local file for {key}: {data_files[key]}")
-    datasets = load_dataset("text", data_files=data_files)
-    logger.info(f"data structure is: {datasets}")
 
     # Preprocessing the datasets.
     # First we tokenize all the texts.
@@ -246,17 +297,49 @@ def main():
         column_names = datasets["validation"].column_names
     text_column_name = "text" if "text" in column_names else column_names[0]
 
-    def tokenize_function(examples):
-        return tokenizer(examples[text_column_name], padding="max_length", truncation=True, max_length=128)
+    # tokenized_inputs = datasets.map(lambda x: tokenizer(x["abusive_speech"], truncation=True), batched=True, remove_columns=["abusive_speech", "counter_speech"])
+    # max_source_length = max([len(x) for x in tokenized_inputs["input_ids"]])
+    max_source_length = 256
+    logger.info(f"Max source length: {max_source_length}")
+
+    # tokenized_targets = datasets.map(lambda x: tokenizer(x["counter_speech"], truncation=True), batched=True, remove_columns=["abusive_speech", "counter_speech"])
+    # max_target_length = max([len(x) for x in tokenized_targets["input_ids"]])
+    max_target_length = 128
+    # logger.info(f"Max target length: {max_target_length}")
+
+    def preprocess_function(sample, padding="max_length"):
+        # add prefix to the input for t5
+        inputs = [" response: " + item for item in sample["abusive_speech"]]
+
+        # tokenize inputs
+        model_inputs = tokenizer(inputs, max_length=max_source_length, padding=padding, truncation=True)
+
+        # Tokenize targets with the `text_target` keyword argument
+        with tokenizer.as_target_tokenizer():
+            labels = tokenizer(text_target=sample["counter_speech"], max_length=max_target_length, padding=padding, truncation=True)
+
+        # If we are padding here, replace all tokenizer.pad_token_id in the labels by -100 when we want to ignore
+        # padding in the loss.
+        if padding == "max_length":
+            labels["input_ids"] = [
+                [(l if l != tokenizer.pad_token_id else -100) for l in label] for label in labels["input_ids"]
+            ]
+
+        model_inputs["labels"] = labels["input_ids"]
+        return model_inputs
+
+    # def tokenize_function(examples):
+    #     return tokenizer(examples[text_column_name], padding="max_length", truncation=True, max_length=128)
 
     tokenized_datasets = datasets.map(
-        tokenize_function,
+        preprocess_function,
         batched=True,
         num_proc=data_args.preprocessing_num_workers,
-        remove_columns=column_names,
+        remove_columns=['IDX-1', 'IDX-2', 'abusive_speech', 'counter_speech', 'target', 'source', 'label'],
         load_from_cache_file=not data_args.overwrite_cache,
         desc="Running tokenizer on dataset",
     )
+    logger.info(f"dataset overview: {tokenized_datasets['train'][:3]}")
 
     if data_args.block_size is None:
         block_size = tokenizer.model_max_length
@@ -297,13 +380,13 @@ def main():
     #
     # To speed up this part, we use multiprocessing. See the documentation of the map method for more information:
     # https://huggingface.co/docs/datasets/package_reference/main_classes.html#datasets.Dataset.map
-    lm_datasets = tokenized_datasets.map(
-        group_texts,
-        batched=True,
-        num_proc=data_args.preprocessing_num_workers,
-        load_from_cache_file=not data_args.overwrite_cache,
-        desc=f"Grouping texts in chunks of {block_size}",
-    )
+    # lm_datasets = tokenized_datasets.map(
+    #     group_texts,
+    #     batched=True,
+    #     num_proc=data_args.preprocessing_num_workers,
+    #     load_from_cache_file=not data_args.overwrite_cache,
+    #     desc=f"Grouping texts in chunks of {block_size}",
+    # )
 
     def preprocess_logits_for_metrics(logits, labels):
         if isinstance(logits, tuple):
@@ -320,19 +403,94 @@ def main():
         labels = labels[:, 1:].reshape(-1)
         preds = preds[:, :-1].reshape(-1)
         return acc.compute(predictions=preds, references=labels)
+    
+    # helper function to postprocess text
+    def postprocess_text(preds, labels):
+        preds = [pred.strip() for pred in preds]
+        labels = [label.strip() for label in labels]
+
+        # rougeLSum expects newline after each sentence
+        preds = ["\n".join(sent_tokenize(pred)) for pred in preds]
+        labels = ["\n".join(sent_tokenize(label)) for label in labels]
+
+        return preds, labels
+
+    def compute_metrics_generation(eval_pred):
+        metric = evaluate.load("rouge")
+        predictions, labels = eval_pred
+        decoded_preds = tokenizer.batch_decode(predictions, skip_special_tokens=True)
+        
+        # Replace -100 in the labels as we can't decode them.
+        labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
+        decoded_labels = tokenizer.batch_decode(predictions, skip_special_tokens=True)
+        
+        # Rouge expects a newline after each sentence
+        decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+
+        # Some simple post-processing
+        decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
+        
+        # Compute ROUGE scores
+        result = metric.compute(predictions=decoded_preds, references=decoded_labels,
+                                use_stemmer=True)
+
+        # Extract ROUGE f1 scores
+        result = {k: round(v * 100, 4) for k, v in result.items()}
+        
+        # Add mean generated length to metrics
+        prediction_lens = [np.count_nonzero(pred != tokenizer.pad_token_id)
+                        for pred in predictions]
+        result["gen_len"] = np.mean(prediction_lens)
+        
+        return result
 
     # Initialize our Trainer
-    trainer = Trainer(
+    if model_args.seq2seqlm:
+        # Define training args
+        training_args = Seq2SeqTrainingArguments(
+            run_name=training_args.run_name,
+            output_dir=training_args.output_dir,
+            do_train=True,
+            per_device_train_batch_size=2,
+            per_device_eval_batch_size=8,
+            predict_with_generate=True,
+            fp16=False, # Overflows with fp16
+            learning_rate=2e-5,
+            num_train_epochs=training_args.num_train_epochs,
+            # logging & evaluation strategies
+            logging_dir=f"experiments/experiment_logs/{datetime_str}.log",
+            logging_strategy="epoch",
+            evaluation_strategy="epoch",
+            save_strategy="epoch",
+            load_best_model_at_end=True,
+            # metric_for_best_model="overall_f1",
+            # push to hub parameters
+            report_to="wandb",
+            push_to_hub=False,
+            )
+
+        trainer = Seq2SeqTrainer(
         model=model,
         args=training_args,
-        train_dataset=lm_datasets["train"] if training_args.do_train else None,
-        eval_dataset=lm_datasets["validation"] if training_args.do_eval else None,
+        train_dataset=tokenized_datasets["train"] if training_args.do_train else None,
+        eval_dataset=tokenized_datasets["validation"] if training_args.do_eval else None,
+        tokenizer=tokenizer,
+        data_collator=DataCollatorForSeq2Seq(tokenizer),
+        compute_metrics=compute_metrics_generation,#compute_metrics,
+        )
+    else:
+        trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=tokenized_datasets["train"] if training_args.do_train else None,
+        eval_dataset=tokenized_datasets["validation"] if training_args.do_eval else None,
         tokenizer=tokenizer,
         # Data collator will default to DataCollatorWithPadding, so we change it.
         data_collator=default_data_collator,
         compute_metrics=compute_metrics,
         preprocess_logits_for_metrics=preprocess_logits_for_metrics,
-    )
+        )
+    
 
     # Training
     if training_args.do_train:
@@ -343,7 +501,7 @@ def main():
         else:
             checkpoint = None
         logger.info(f'checkpoint is {checkpoint}.')
-        train_result = trainer.train(resume_from_checkpoint=checkpoint)
+        train_result = trainer.train()
         trainer.save_model()  # Saves the tokenizer too for easy upload
 
         metrics = train_result.metrics
