@@ -258,12 +258,12 @@ def main():
                     tokenizer_kwargs = {}
 
                 encoded_prompt = tokenizer.encode(
-                    preprocessed_prompt_text, add_special_tokens=False, return_tensors="pt", **tokenizer_kwargs
+                    preprocessed_prompt_text, add_special_tokens=False, return_tensors="pt", max_length=1024, **tokenizer_kwargs
                 )
             else:
                 prefix = args.prefix if args.prefix else args.padding_text
                 # encoded_prompt = tokenizer.encode(prefix + prompt_text, add_special_tokens=False, return_tensors="pt")
-                encoded_prompt = tokenizer.encode(prompt_text, add_special_tokens=True, return_tensors="pt")
+                encoded_prompt = tokenizer.encode(prompt_text, add_special_tokens=True, return_tensors="pt", max_length=1024)
             encoded_prompt = encoded_prompt.to(args.device)
 
             if encoded_prompt.size()[-1] == 0:
