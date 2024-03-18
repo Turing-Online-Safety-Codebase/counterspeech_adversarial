@@ -1,5 +1,5 @@
 """
-Take raw labelled data returned by Appen, do quality control and calculate annotator agreement
+Take raw labelled data returned by crowdsourced platforms, do quality control and calculate annotator agreement
 Output results to csv and create a csv for tweets required extra review
 """
 
@@ -10,10 +10,10 @@ from collections import Counter
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Process labelled data for modeling")
-    parser.add_argument('--data_dir', type=str, default='data/twitter_plf_data/twitter_plf_labelled', help='')
-    parser.add_argument('--annotation_filename', default='R6_full.csv', type=str, help='name of labelled data')
-    parser.add_argument('--gold_filename', type=str, default='R6_Appen_test_quiz.csv', help='name of gold standard')
-    parser.add_argument('--output_filename', default='R6_rangled.csv', type=str, help='name of output file')
+    parser.add_argument('--data_dir', type=str, default='data', help='')
+    parser.add_argument('--annotation_filename', type=str, help='name of labelled data')
+    parser.add_argument('--gold_filename', type=str, help='name of gold standard')
+    parser.add_argument('--output_filename', type=str, help='name of output file')
     parser.add_argument('--column_reply_category', type=str, default='which_category_best_describes_the_reply',
                         help='column name for reply_category annotation')
     parser.add_argument('--column_reply_abusive', type=str, default='is_the_reply_abusive',
@@ -202,8 +202,8 @@ def main(output_file, data_dir, annotation_filename, gold_file, column_reply_cat
      flag_reply_category, flag_reply_support, flag_reply_abusive, reply_category_bar, reply_support_bar, reply_abusive_bar):
 
     batch = annotation_filename.split("_")[0]
-    df_gold = pd.read_csv(f'{data_dir}/Appen_annotation/{batch}/{gold_file}', dtype={'Rep_ID': str, '_golden':str, 'ACT_ID':str})
-    df_t1 = pd.read_csv(f'{data_dir}/Appen_annotation/{batch}/{annotation_filename}', dtype={'rep_id': str})
+    df_gold = pd.read_csv(f'{data_dir}/{batch}/{gold_file}', dtype={'Rep_ID': str, '_golden':str, 'ACT_ID':str})
+    df_t1 = pd.read_csv(f'{data_dir}/{batch}/{annotation_filename}', dtype={'rep_id': str})
     df_t1 = df_t1.astype({'_golden': str})  # convert the type of '_golden' (numpy boolean) to string
     df_gold = df_gold.astype({'Rep_ID': str})  # convert the type of 'Rep_ID' (numpy boolean) to string
 
@@ -332,7 +332,7 @@ def main(output_file, data_dir, annotation_filename, gold_file, column_reply_cat
     print("avg % of annotators agree on the majority vote for rep_abusive: ",
           round(df_quiz["% rep_abusive_annotation"].mean(), 3))
 
-    df_merged.to_csv(f'{data_dir}/Appen_export_rangled/{output_file}', index=False)
+    df_merged.to_csv(f'{data_dir}/{output_file}', index=False)
 
 if __name__ == '__main__':
     args = parse_args()

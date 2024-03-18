@@ -146,9 +146,6 @@ def main():
     run_time = 0
 
     # See all possible arguments at https://github.com/huggingface/transformers/blob/main/src/transformers/training_args.py
-    # or by passing the --help flag to this script.
-    parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
-    model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     # Setup logging
     logger.setLevel(logging.DEBUG)
@@ -298,7 +295,6 @@ def main():
     # Log a few random samples from the training set:
     for index in random.sample(range(len(train_dataset)), 3):
         logger.info(f"Sample {index} of the train set: {train_dataset[index]}.")
-        # logger.info(f"Sample {index} of the validation set: {eval_dataset[index]}.")
 
     # define metric (use accuracy and f1)
     # Custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a

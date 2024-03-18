@@ -36,12 +36,8 @@ from transformers import (
     GPT2Tokenizer,
     OpenAIGPTLMHeadModel,
     OpenAIGPTTokenizer,
-    TransfoXLLMHeadModel,
-    TransfoXLTokenizer,
     XLMTokenizer,
     XLMWithLMHeadModel,
-    XLNetLMHeadModel,
-    XLNetTokenizer,
 )
 
 
@@ -58,40 +54,14 @@ MODEL_CLASSES = {
     "gpt2": (GPT2LMHeadModel, GPT2Tokenizer),
     "ctrl": (CTRLLMHeadModel, CTRLTokenizer),
     "openai-gpt": (OpenAIGPTLMHeadModel, OpenAIGPTTokenizer),
-    "xlnet": (XLNetLMHeadModel, XLNetTokenizer),
-    "transfo-xl": (TransfoXLLMHeadModel, TransfoXLTokenizer),
     "xlm": (XLMWithLMHeadModel, XLMTokenizer),
 }
-
-# MODEL_CONFIG_CLASSES = list(MODEL_FOR_CAUSAL_LM_MAPPING.keys())
-# MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
-
-# Padding text to help Transformer-XL and XLNet with short prompts as proposed by Aman Rusia
-# in https://github.com/rusiaaman/XLNet-gen#methodology
-# and https://medium.com/@amanrusia/xlnet-speaks-comparison-to-gpt-2-ea1a4e9ba39e
-PREFIX = """In 1991, the remains of Russian Tsar Nicholas II and his family
-(except for Alexei and Maria) are discovered.
-The voice of Nicholas's young son, Tsarevich Alexei Nikolaevich, narrates the
-remainder of the story. 1883 Western Siberia,
-a young Grigori Rasputin is asked by his father and a group of men to perform magic.
-Rasputin has a vision and denounces one of the men as a horse thief. Although his
-father initially slaps him for making such an accusation, Rasputin watches as the
-man is chased outside and beaten. Twenty years later, Rasputin sees a vision of
-the Virgin Mary, prompting him to become a priest. Rasputin quickly becomes famous,
-with people, even a bishop, begging for his blessing. <eod> </s> <eos>"""
-
 
 def set_seed(args):
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     if args.n_gpu > 0:
         torch.cuda.manual_seed_all(args.seed)
-
-
-#
-# Functions to prepare models' input
-#
-
 
 def prepare_ctrl_input(args, _, tokenizer, prompt_text):
     if args.temperature > 0.7:
@@ -104,7 +74,6 @@ def prepare_ctrl_input(args, _, tokenizer, prompt_text):
 
 
 def prepare_xlm_input(args, model, tokenizer, prompt_text):
-    # kwargs = {"language": None, "mask_token_id": None}
 
     # Set the language
     use_lang_emb = hasattr(model.config, "use_lang_emb") and model.config.use_lang_emb
@@ -118,27 +87,11 @@ def prepare_xlm_input(args, model, tokenizer, prompt_text):
                 language = input("Using XLM. Select language in " + str(list(available_languages)) + " >>> ")
 
         model.config.lang_id = model.config.lang2id[language]
-        # kwargs["language"] = tokenizer.lang2id[language]
     return prompt_text
-
-
-def prepare_xlnet_input(args, _, tokenizer, prompt_text):
-    prefix = args.prefix if args.prefix else args.padding_text if args.padding_text else PREFIX
-    prompt_text = prefix + prompt_text
-    return prompt_text
-
-
-def prepare_transfoxl_input(args, _, tokenizer, prompt_text):
-    prefix = args.prefix if args.prefix else args.padding_text if args.padding_text else PREFIX
-    prompt_text = prefix + prompt_text
-    return prompt_text
-
 
 PREPROCESSING_FUNCTIONS = {
     "ctrl": prepare_ctrl_input,
     "xlm": prepare_xlm_input,
-    "xlnet": prepare_xlnet_input,
-    "transfo-xl": prepare_transfoxl_input,
 }
 
 
@@ -150,31 +103,6 @@ def adjust_length_to_model(length, max_sequence_length):
     elif length < 0:
         length = MAX_LENGTH  # avoid infinite loop
     return length
-
-def abuse_filter(abusive_text, sequence, df, regeneration_needed):
-    # TODO: a classifier that can classify if a generated text is abusive 
-    # To be used in the generation pipeline
-    model_name = "experiments/models/iter_0/run1_final_deberta"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSequenceClassification.from_pretrained(model_name)
-    label_dict = {0: 'agrees_with_the_post', 1: 'disagrees_with_the_post', 2: 'other'}
-
-    predict = tokenizer(abusive_text, sequence, return_tensors="pt")
-    logits = model(**predict).logits
-    scores = torch.softmax(logits, dim=1)
-    pred_prob_list = scores.tolist()[0]
-    pred_indice = scores.argmax().item()
-
-    if pred_indice == 0:
-        regeneration_needed = True
-        print("It is abuse. Regeneration is needed")
-        # print(f"Confidence counter speech is {int(round(pred_prob_list[1] * 100))}%.\nConfidence not_counter_speech is {int(round(pred_prob_list[0] * 100))}%\nConfidence other is {int(round(pred_prob_list[2] * 100))}%")
-    else:
-        regeneration_needed = False
-    # append data
-    new_row = {'abusive_speech':abusive_text, 'response': sequence, 'pred_label': pred_indice, 'pred_prob': pred_prob_list[pred_indice]}
-    df1 = df.append(new_row, ignore_index=True)
-    return regeneration_needed, df
 
 def main():
     parser = argparse.ArgumentParser()
@@ -233,11 +161,7 @@ def main():
     if args.fp16:
         model.half()
 
-    # args.length = adjust_length_to_model(args.length, max_sequence_length=model.config.max_position_embeddings)
     logger.info(args)
-
-    # create a dataframe containing generaion text that is abusive
-    # df_generation = pandas.DataFrame({'abusive_speech':[], 'response': [], 'pred_label': [], 'pred_prob': []})
 
     output_raw_file = open(args.output_raw_file_path, "w")
     output_clean_file = open(args.output_clean_file_path, "w")
@@ -262,7 +186,6 @@ def main():
                 )
             else:
                 prefix = args.prefix if args.prefix else args.padding_text
-                # encoded_prompt = tokenizer.encode(prefix + prompt_text, add_special_tokens=False, return_tensors="pt")
                 encoded_prompt = tokenizer.encode(prompt_text, add_special_tokens=True, return_tensors="pt", max_length=1024)
             encoded_prompt = encoded_prompt.to(args.device)
 
@@ -272,11 +195,6 @@ def main():
                 input_ids = encoded_prompt
 
             num_attempts = 0
-            # TODO: setup a variable for whether to regenerate for poor generation
-            regenerate = True
-
-            # TODO: inject an abuse classifier in the pipeline
-            # Set this abuse classifier option as a parameter that can be optional
             while "<END>" not in text:
                 num_attempts += 1
 
@@ -309,21 +227,11 @@ def main():
                     # Remove all text after the stop token
                     text = text[: text.find(args.stop_token) if args.stop_token else None]
 
-                    # Add the prompt at the beginning of the sequence. Remove the excess text that was used for pre-processing
-                    # total_sequence = (
-                    #     prompt_text + text[len(tokenizer.decode(encoded_prompt[0], clean_up_tokenization_spaces=True)) :]
-                    # )
                     output = text.replace(prompt_text, "")
                     clean_output = output.split(' <END>')[0].replace('</s>', '').replace('<pad>', '').strip()
 
-                    # generated_sequences.append(total_sequence)
-                    print("HS:", prompt_text)
-                    print("CS:", output)
-                    print("CO:", clean_output)
-
                 if "<END>" in output or num_attempts > 3:
                     break
-                # regenerate, df_generation = abuse_filter(prompt_text, clean_output, df_generation)
 
             print("====== New Entry======")
             output_raw_file.write("====== New Entry======" + "\n")

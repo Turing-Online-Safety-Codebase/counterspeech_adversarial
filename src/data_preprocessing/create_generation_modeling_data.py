@@ -5,7 +5,7 @@ import argparse
 
 def parse_args():
     """Parses Command Line Args"""
-    parser = argparse.ArgumentParser(description="Create modeling data for counter speech generation")
+    parser = argparse.ArgumentParser(description="Create modeling data for counterspeech generation")
     parser.add_argument('--input_data_path', type=str, default='data/final_modeling_data', help='Path to data directory')
     parser.add_argument('--input_filename', type=str, default='val_labelled.csv', help='filename of input data')
     parser.add_argument('--output_filename', type=str, default='val.txt', help='filename of output data')

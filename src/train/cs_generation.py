@@ -171,9 +171,6 @@ def main():
     datetime_str = str(datetime.datetime.now())
 
     # See all possible arguments in src/transformers/training_args.py
-    # or by passing the --help flag to this script.
-    # We now keep distinct sets of args, for a cleaner separation of concerns.
-
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
@@ -226,12 +223,6 @@ def main():
     datasets["validation"] = datasets["validation"].shuffle().select(range(2000))
 
     logger.info(f"data structure is: {datasets}")
-
-    # Load pretrained model and tokenizer
-    #
-    # Distributed training:
-    # The .from_pretrained methods guarantee that only one local process can concurrently
-    # download model & vocab.
 
     config_kwargs = {
         "cache_dir": model_args.cache_dir,
@@ -297,15 +288,10 @@ def main():
         column_names = datasets["validation"].column_names
     text_column_name = "text" if "text" in column_names else column_names[0]
 
-    # tokenized_inputs = datasets.map(lambda x: tokenizer(x["abusive_speech"], truncation=True), batched=True, remove_columns=["abusive_speech", "counter_speech"])
-    # max_source_length = max([len(x) for x in tokenized_inputs["input_ids"]])
     max_source_length = 256
     logger.info(f"Max source length: {max_source_length}")
 
-    # tokenized_targets = datasets.map(lambda x: tokenizer(x["counter_speech"], truncation=True), batched=True, remove_columns=["abusive_speech", "counter_speech"])
-    # max_target_length = max([len(x) for x in tokenized_targets["input_ids"]])
     max_target_length = 128
-    # logger.info(f"Max target length: {max_target_length}")
 
     def preprocess_function(sample, padding="max_length"):
         # add prefix to the input for t5
@@ -327,9 +313,6 @@ def main():
 
         model_inputs["labels"] = labels["input_ids"]
         return model_inputs
-
-    # def tokenize_function(examples):
-    #     return tokenizer(examples[text_column_name], padding="max_length", truncation=True, max_length=128)
 
     tokenized_datasets = datasets.map(
         preprocess_function,
@@ -373,20 +356,6 @@ def main():
         }
         result["labels"] = result["input_ids"].copy()
         return result
-
-    # Note that with `batched=True`, this map processes 1,000 texts together, so group_texts throws away a remainder
-    # for each of those groups of 1,000 texts. You can adjust that batch_size here but a higher value might be slower
-    # to preprocess.
-    #
-    # To speed up this part, we use multiprocessing. See the documentation of the map method for more information:
-    # https://huggingface.co/docs/datasets/package_reference/main_classes.html#datasets.Dataset.map
-    # lm_datasets = tokenized_datasets.map(
-    #     group_texts,
-    #     batched=True,
-    #     num_proc=data_args.preprocessing_num_workers,
-    #     load_from_cache_file=not data_args.overwrite_cache,
-    #     desc=f"Grouping texts in chunks of {block_size}",
-    # )
 
     def preprocess_logits_for_metrics(logits, labels):
         if isinstance(logits, tuple):
@@ -457,14 +426,12 @@ def main():
             fp16=False, # Overflows with fp16
             learning_rate=2e-5,
             num_train_epochs=training_args.num_train_epochs,
-            # logging & evaluation strategies
             logging_dir=f"experiments/experiment_logs/{datetime_str}.log",
             logging_strategy="epoch",
             evaluation_strategy="epoch",
             save_strategy="epoch",
             load_best_model_at_end=True,
             # metric_for_best_model="overall_f1",
-            # push to hub parameters
             report_to="wandb",
             push_to_hub=False,
             )
@@ -476,7 +443,7 @@ def main():
         eval_dataset=tokenized_datasets["validation"] if training_args.do_eval else None,
         tokenizer=tokenizer,
         data_collator=DataCollatorForSeq2Seq(tokenizer),
-        compute_metrics=compute_metrics_generation,#compute_metrics,
+        compute_metrics=compute_metrics_generation,
         )
     else:
         trainer = Trainer(
