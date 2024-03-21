@@ -2,36 +2,16 @@
 
 This work aims at developing counterspeech classifiers for mitigating online hate targeting at premium league footballers. It employs human-and-model-in-the-loop data collection over multiple rounds to test and improve model capabilities. 
 
-## Folder overview
-
-    └─ collection           -> Scripts for data collection from Twitter
-    │
-    ├── data                -> Folder to store raw data, labelled data, modeling data, 
-    │                            and adversarial data
-    │
-    ├── dynabench           -> Task configuration for Dynabench
-    │
-    ├── dynalab             -> Model handler for Dynalab
-    │
-    ├── experiments         -> Folder to store logs and models
-    │
-    ├── scripts             -> Bash scripts for training models
-    │
-    └── src                 -> Source codes for data preprocessing and model training
-        │
-        └── data_preprocessing    ->  Scripts for wrangling/analysing raw and annotated data,
-        │                             creating modeling data
-        │
-        └── train                 ->  Scripts for model training
-
-## Data creation
+## Authentic Counterspeech Collection
 ### Collect abusive tweets and their replies
 The scripts in the folder `collection` contain example codes we use to gather potential abusive tweets and their replies.
 
 
-## Counterspeech classification through adversarial training
+## DynaCounter Dataset: Dynamic Adversarial Counterspeech Collection
 ### Model training and evaluation
-Once the data is labelled, we can start to train counterspeech classifiers and collect dynamic adversarial data over multiple iterations. To train/evaluate a counterspeech classifier, run
+DynaCounter is collected over multiple iterations. The file can be downloaded [HERE](https://github.com/Turing-Online-Safety-Codebase/counterspeech_adversarial/blob/main/data/adversarial_data/DynaCounter.csv). 
+
+To train/evaluate a counterspeech classifier, run
 
 ```
 python -m src.train.cs_classification \
@@ -127,3 +107,21 @@ Before running it for the first time, you must run the following command:
 Then, to run the script in the background (so it will continue to run after exiting the VM), run the following:
 
 `nohup ./run_python_then_dealloc.sh &`
+
+
+## Citation
+
+For more details on data analysis and experiments, please see our paper.
+
+```bibtex
+@inproceedings{chung-etal-2024-towards,
+    title = "On the Effectiveness of Adversarial Robustness for Abuse Mitigation with Counterspeech",
+    author = "Chung, Yi-Ling and Bright, Jonathan",
+    booktitle = "Proceedings of the 2024 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies ",
+    year = "2024",
+    publisher = "Association for Computational Linguistics",
+    url = "",
+    doi = "",
+    pages = "",
+}
+```
