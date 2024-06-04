@@ -46,7 +46,7 @@ You can specify various training parameters when calling the script.
 ### Evaluate models on a given dataset
 
 ```
-python -m src.evaluation.cs_classification_predict.py \
+python -m src.evaluation.cs_classification_inference \
     --model_name_or_path $MODEL_PATH \
     --test_file $TEST_FILE \
     --run_name $RUN_NAME \    
